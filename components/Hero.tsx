@@ -9,7 +9,7 @@ export default function Hero() {
       />
       <div className="relative flex min-h-[720px] flex-col justify-between px-6 py-10 sm:px-10 lg:min-h-[820px] lg:px-16 lg:py-14">
         <div className="flex justify-between text-[10px] uppercase tracking-[0.22em] text-[#FDFBF7]/70">
-          <span></span>
+          <span>01 — ROL-EMS &amp; REBAR</span>
           <span className="hidden sm:block">San Jose, Cavite · Philippines</span>
         </div>
         <div className="max-w-3xl">
