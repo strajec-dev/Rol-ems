@@ -1,4 +1,4 @@
-export type Facility = {
+﻿export type Facility = {
   establishment: 'ROL-EMS Resort' | 'Rebar Sports Center'
   category: string
   title: string
@@ -18,7 +18,7 @@ export const facilities: Facility[] = [
     detail: 'Private cottage stay · whole-area and event reservations',
     price: '₱2,500 / day',
     status: 'Available now',
-    image: '/events/cottage.jpg',
+    image: '/sports-events/cottage.jpg',
   },
   {
     establishment: 'ROL-EMS Resort',
@@ -27,7 +27,7 @@ export const facilities: Facility[] = [
     detail: 'Pickleball court · open play queue active',
     price: '₱350 / hour',
     status: 'Live queue active',
-    image: '/events/pickleball.jpg',
+    image: '/sports-events/pickleball.jpg',
   },
   {
     establishment: 'Rebar Sports Center',
@@ -45,7 +45,7 @@ export const facilities: Facility[] = [
     detail: 'Training floor for taekwondo sessions',
     price: '₱250 / hour',
     status: 'Available now',
-    image: '/events/teakwondo.jpg',
+    image: '/sports-events/teakwondo.jpg',
   },
 ]
 
@@ -57,16 +57,16 @@ export type CottageType = {
 }
 
 export const cottageOptions: CottageType[] = [
-  { name: 'Beach Cottage', detail: 'Beachside cottage rental · kubo style', price: '₱2,500 / day', image: '/events/cottage.jpg' },
+  { name: 'Beach Cottage', detail: 'Beachside cottage rental · kubo style', price: '₱2,500 / day', image: '/sports-events/cottage.jpg' },
 ]
 
 export const eventVenues: CottageType[] = [
-  { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: 'Event fee on request', image: '/events/cottage.jpg' },
+  { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: 'Event fee on request', image: '/sports-events/cottage.jpg' },
 ]
 
 export const pickleballOptions: CottageType[] = [
-  { name: 'Court 01', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/events/pickleball.jpg' },
-  { name: 'Court 02', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/events/pickleball.jpg' },
+  { name: 'Court 01', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/sports-events/pickleball.jpg' },
+  { name: 'Court 02', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/sports-events/pickleball.jpg' },
 ]
 
 // Real-time availability (simulated). Keys are ISO dates; values are start times
