@@ -2,9 +2,9 @@
 
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import CottageBookingForm from '@/components/booking/cottage-form'
+import PickleballBookingForm from '@/components/booking/pickleball-form'
 
-export default function CottagePage() {
+export default function PickleballPage() {
   const router = useRouter()
 
   return (
@@ -27,17 +27,17 @@ export default function CottagePage() {
         >
           <ArrowLeft size={14} /> Back to Stay & play
         </button>
-        <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Cottage & Event</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Pickleball</p>
         <h1 className="mt-4 font-serif text-5xl leading-[0.95] tracking-[-0.05em] text-[#1E5336] sm:text-6xl">
-          Reserve a cottage or book a venue.
+          Book a court, hit the open line.
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-6 text-[#6B756B]">
-          Rent a cottage by the beach for a day or overnight, or book the whole area for your event.
+          Reserve a pickleball court by the hour, or join the live open play queue at Rebar.
         </p>
       </section>
 
       <section className="mx-auto max-w-2xl px-6 pb-16">
-        <CottageBookingForm onDone={() => router.push('/#facilities')} />
+        <PickleballBookingForm onDone={() => router.push('/#facilities')} />
       </section>
     </main>
   )

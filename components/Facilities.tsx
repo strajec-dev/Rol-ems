@@ -39,50 +39,35 @@ export default function Facilities() {
         </div>
         <div className="grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((item) => {
-            const isCottage = item.title === 'Cottage & Event'
+            const href = item.title === 'Cottage & Event' ? '/cottage' : item.title === 'Pickleball' ? '/pickleball' : null
 
-            return (
+            const card = (
               <article key={item.title} className="group">
-                {isCottage ? (
-                  <Link href="/cottage" className="block w-full cursor-pointer text-left">
-                    <div className="relative aspect-[4/5] overflow-hidden">
-                      <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${item.image})` }} />
-                      <span className="absolute left-4 top-4 bg-[#FDFBF7] px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-[#1E5336]">{item.status}</span>
-                    </div>
-                    <div className="pt-5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#E1A728]">{item.category}</p>
-                        <span className="border border-[#1E5336]/20 px-2 py-1 text-[9px] uppercase tracking-[0.12em] text-[#6B756B]">{shortName[item.establishment]}</span>
-                      </div>
-                      <h3 className="mt-2 font-serif text-2xl text-[#1E5336]">{item.title}</h3>
-                      <p className="mt-2 text-xs leading-5 text-[#6B756B]">{item.detail}</p>
-                      <div className="mt-5 flex justify-between border-t border-[#222222]/15 pt-4 text-sm">
-                        <span>{item.price}</span>
-                        <ArrowUpRight size={16} className="text-[#1E5336]" />
-                      </div>
-                    </div>
-                  </Link>
-                ) : (
-                  <>
-                    <div className="relative aspect-[4/5] overflow-hidden">
-                      <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${item.image})` }} />
-                      <span className="absolute left-4 top-4 bg-[#FDFBF7] px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-[#1E5336]">{item.status}</span>
-                    </div>
-                    <div className="pt-5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#E1A728]">{item.category}</p>
-                        <span className="border border-[#1E5336]/20 px-2 py-1 text-[9px] uppercase tracking-[0.12em] text-[#6B756B]">{shortName[item.establishment]}</span>
-                      </div>
-                      <h3 className="mt-2 font-serif text-2xl text-[#1E5336]">{item.title}</h3>
-                      <p className="mt-2 text-xs leading-5 text-[#6B756B]">{item.detail}</p>
-                      <div className="mt-5 flex justify-between border-t border-[#222222]/15 pt-4 text-sm">
-                        <span>{item.price}</span>
-                        <ArrowUpRight size={16} className="text-[#1E5336]" />
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="relative aspect-[4/5] overflow-hidden">
+                  <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${item.image})` }} />
+                  <span className="absolute left-4 top-4 bg-[#FDFBF7] px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-[#1E5336]">{item.status}</span>
+                </div>
+                <div className="pt-5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#E1A728]">{item.category}</p>
+                    <span className="border border-[#1E5336]/20 px-2 py-1 text-[9px] uppercase tracking-[0.12em] text-[#6B756B]">{shortName[item.establishment]}</span>
+                  </div>
+                  <h3 className="mt-2 font-serif text-2xl text-[#1E5336]">{item.title}</h3>
+                  <p className="mt-2 text-xs leading-5 text-[#6B756B]">{item.detail}</p>
+                  <div className="mt-5 flex justify-between border-t border-[#222222]/15 pt-4 text-sm">
+                    <span>{item.price}</span>
+                    <ArrowUpRight size={16} className="text-[#1E5336]" />
+                  </div>
+                </div>
               </article>
+            )
+
+            return href ? (
+              <Link key={item.title} href={href} className="block w-full cursor-pointer text-left">
+                {card}
+              </Link>
+            ) : (
+              card
             )
           })}
         </div>

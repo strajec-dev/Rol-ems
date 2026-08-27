@@ -64,6 +64,11 @@ export const eventVenues: CottageType[] = [
   { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: 'Event fee on request', image: '/events/cottage.jpg' },
 ]
 
+export const pickleballOptions: CottageType[] = [
+  { name: 'Court 01', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/events/pickleball.jpg' },
+  { name: 'Court 02', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/events/pickleball.jpg' },
+]
+
 export const facilityFilters = ['All', 'ROL-EMS Resort', 'Rebar Sports Center'] as const
 
 export const queues: Record<string, string[]> = {
