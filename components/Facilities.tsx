@@ -39,7 +39,12 @@ export default function Facilities() {
         </div>
         <div className="grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((item) => {
-            const href = item.title === 'Cottage & Event' ? '/cottage' : item.title === 'Pickleball' ? '/pickleball' : null
+            const href =
+              item.title === 'Cottage & Event'
+                ? '/cottage'
+                : item.title === 'Pickleball'
+                  ? 'https://rol-ems-pickleball.vercel.app/'
+                  : null
 
             const card = (
               <article key={item.title} className="group">
@@ -62,12 +67,20 @@ export default function Facilities() {
               </article>
             )
 
-            return href ? (
+            if (!href) return card
+
+            if (href.startsWith('http')) {
+              return (
+                <a key={item.title} href={href} target="_blank" rel="noopener noreferrer" className="block w-full cursor-pointer text-left">
+                  {card}
+                </a>
+              )
+            }
+
+            return (
               <Link key={item.title} href={href} className="block w-full cursor-pointer text-left">
                 {card}
               </Link>
-            ) : (
-              card
             )
           })}
         </div>
