@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { facilities, facilityFilters, type Facility } from '@/lib/data'
-import CottageBooking from '@/components/CottageBooking'
 
 const shortName: Record<Facility['establishment'], string> = {
   'ROL-EMS Resort': 'Resort',
@@ -12,7 +12,6 @@ const shortName: Record<Facility['establishment'], string> = {
 
 export default function Facilities() {
   const [filter, setFilter] = useState<string>('All')
-  const [bookingOpen, setBookingOpen] = useState(false)
   const visible = filter === 'All' ? facilities : facilities.filter((item: Facility) => item.establishment === filter)
 
   return (
@@ -45,18 +44,7 @@ export default function Facilities() {
             return (
               <article key={item.title} className="group">
                 {isCottage ? (
-                  <div
-                    onClick={() => setBookingOpen(true)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setBookingOpen(true)
-                      }
-                    }}
-                    className="block w-full cursor-pointer text-left"
-                  >
+                  <Link href="/cottage" className="block w-full cursor-pointer text-left">
                     <div className="relative aspect-[4/5] overflow-hidden">
                       <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url(${item.image})` }} />
                       <span className="absolute left-4 top-4 bg-[#FDFBF7] px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-[#1E5336]">{item.status}</span>
@@ -73,7 +61,7 @@ export default function Facilities() {
                         <ArrowUpRight size={16} className="text-[#1E5336]" />
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ) : (
                   <>
                     <div className="relative aspect-[4/5] overflow-hidden">
@@ -99,7 +87,6 @@ export default function Facilities() {
           })}
         </div>
       </div>
-      <CottageBooking open={bookingOpen} onClose={() => setBookingOpen(false)} />
     </section>
   )
 }
