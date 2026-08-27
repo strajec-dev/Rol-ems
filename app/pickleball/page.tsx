@@ -32,7 +32,7 @@ export default function PickleballPage() {
           Book a court, hit the open line.
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-6 text-[#6B756B]">
-          Reserve a pickleball court by the hour, or join the live open play queue at Rebar.
+          Reserve a pickleball court by the hour, check live availability, or join the open play queue at ROL-EMS Resort.
         </p>
       </section>
 

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
-import { pickleballOptions } from '@/lib/data'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CircleCheck } from 'lucide-react'
+import { pickleballOptions, pickleballAvailability } from '@/lib/data'
 
 type Step = 'schedule' | 'details' | 'review' | 'confirm'
 
@@ -90,6 +90,8 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
     (step === 'details' && detailsReady) ||
     step === 'review'
 
+  const bookedSlots = date ? (pickleballAvailability[date] || []) : []
+
   const currentIndex = steps.findIndex((s) => s.key === step)
 
   const reset = () => {
@@ -137,7 +139,12 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                   onClick={() => setCourt(c)}
                   className={`p-5 text-left transition ${court.name === c.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
                 >
-                  <p className="font-serif text-lg text-[#1E5336]">{c.name}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-serif text-lg text-[#1E5336]">{c.name}</p>
+                    <span className="flex items-center gap-1 text-[9px] uppercase tracking-[0.12em] text-[#1E5336]">
+                      <CircleCheck size={12} /> Available
+                    </span>
+                  </div>
                   <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{c.detail}</p>
                   <p className="mt-3 text-sm font-bold text-[#1E5336]">{c.price}</p>
                 </button>
@@ -211,19 +218,30 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                 </button>
                 {timeOpen && (
                   <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-56 overflow-y-auto border border-[#222222]/15 bg-[#FDFBF7] p-2 shadow-xl">
-                    {timeSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => {
-                          setTime(slot)
-                          setTimeOpen(false)
-                        }}
-                        className={`block w-full px-3 py-2 text-left text-sm transition ${time === slot ? 'bg-[#1E5336] font-bold text-[#FDFBF7]' : 'text-[#222222] hover:bg-[#E1A728] hover:text-[#1E5336]'}`}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                    {timeSlots.map((slot) => {
+                      const taken = date ? bookedSlots.includes(slot) : false
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={taken}
+                          onClick={() => {
+                            setTime(slot)
+                            setTimeOpen(false)
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
+                            taken
+                              ? 'cursor-not-allowed text-[#6B756B]/40 line-through'
+                              : time === slot
+                              ? 'bg-[#1E5336] font-bold text-[#FDFBF7]'
+                              : 'text-[#222222] hover:bg-[#E1A728] hover:text-[#1E5336]'
+                          }`}
+                        >
+                          {slot}
+                          {taken && <span className="text-[9px] uppercase tracking-[0.1em] not-italic line-through">Booked</span>}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>

@@ -69,6 +69,13 @@ export const pickleballOptions: CottageType[] = [
   { name: 'Court 02', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/events/pickleball.jpg' },
 ]
 
+// Real-time availability (simulated). Keys are ISO dates; values are start times
+// (e.g. '10:00 AM') already booked on that court that day.
+export const pickleballAvailability: Record<string, string[]> = {
+  '2026-08-27': ['11:00 AM', '3:00 PM'],
+  '2026-08-28': ['9:00 AM', '1:00 PM', '6:00 PM'],
+}
+
 export const facilityFilters = ['All', 'ROL-EMS Resort', 'Rebar Sports Center'] as const
 
 export const queues: Record<string, string[]> = {
