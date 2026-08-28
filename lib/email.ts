@@ -61,8 +61,11 @@ function html({ reference, description, amount, name, date, time, guests }: Temp
 }
 
 export async function sendReceiptEmail(to: string, data: TemplateData): Promise<void> {
+  const fromEnv = process.env.SMTP_FROM || ''
+  const from = fromEnv.includes('<') ? fromEnv : fromEnv ? `ROL-EMS <${fromEnv}>` : `ROL-EMS <${process.env.SMTP_USER}>`
+
   await transporter().sendMail({
-    from: `ROL-EMS <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+    from,
     to,
     subject: `Your ROL-EMS receipt · ${data.reference}`,
     html: html(data),
