@@ -1,9 +1,26 @@
 'use client'
 
 import { ArrowLeft, Check } from 'lucide-react'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 function SuccessContent() {
+  const searchParams = useSearchParams()
+  const [receiptStatus, setReceiptStatus] = useState<'sending' | 'sent' | 'skipped'>('sending')
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id')
+    if (!sessionId) {
+      setReceiptStatus('skipped')
+      return
+    }
+    fetch(`/api/receipt?session_id=${encodeURIComponent(sessionId)}`)
+      .then((r) => {
+        setReceiptStatus(r.ok ? 'sent' : 'skipped')
+      })
+      .catch(() => setReceiptStatus('skipped'))
+  }, [searchParams])
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center bg-[#FDFBF7] px-6 py-16 text-center text-[#222222] shadow-2xl">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1E5336] text-[#FDFBF7]">
@@ -14,6 +31,9 @@ function SuccessContent() {
         Thanks — your booking is confirmed and your receipt is on its way to your email. We&apos;ll be in touch with any
         updates ahead of your visit.
       </p>
+      <span className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">
+        {receiptStatus === 'sending' ? 'Sending your receipt…' : receiptStatus === 'sent' ? 'Receipt sent to your email' : ''}
+      </span>
       <a
         href="/#facilities"
         className="mt-8 inline-flex items-center gap-2 border border-[#1E5336] px-6 py-3 text-[10px] uppercase tracking-[0.16em] text-[#1E5336] hover:bg-[#1E5336] hover:text-[#FDFBF7]"
