@@ -1,25 +1,40 @@
 'use client'
 
 import { ArrowLeft, Check } from 'lucide-react'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 function SuccessContent() {
   const searchParams = useSearchParams()
+  const sessionId = searchParams.get('session_id')
   const [receiptStatus, setReceiptStatus] = useState<'sending' | 'sent' | 'skipped'>('sending')
+  const attempt = useRef(0)
 
   useEffect(() => {
-    const sessionId = searchParams.get('session_id')
     if (!sessionId) {
       setReceiptStatus('skipped')
       return
     }
-    fetch(`/api/receipt?session_id=${encodeURIComponent(sessionId)}`)
-      .then((r) => {
-        setReceiptStatus(r.ok ? 'sent' : 'skipped')
-      })
-      .catch(() => setReceiptStatus('skipped'))
-  }, [searchParams])
+    let cancelled = false
+    const send = () => {
+      attempt.current += 1
+      fetch(`/api/receipt?session_id=${encodeURIComponent(sessionId)}`)
+        .then((r) => {
+          if (cancelled) return
+          if (r.ok) setReceiptStatus('sent')
+          else if (attempt.current < 3) setTimeout(send, 2000)
+          else setReceiptStatus('skipped')
+        })
+        .catch(() => {
+          if (!cancelled && attempt.current < 3) setTimeout(send, 2000)
+          else if (!cancelled) setReceiptStatus('skipped')
+        })
+    }
+    send()
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId])
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center bg-[#FDFBF7] px-6 py-16 text-center text-[#222222] shadow-2xl">
