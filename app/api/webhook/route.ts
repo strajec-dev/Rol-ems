@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   const eventType = event?.data?.attributes?.type
+  console.log('Webhook received, type:', eventType)
   if (eventType !== 'checkout_session.payment.paid') {
     return NextResponse.json({ received: true })
   }
@@ -77,9 +78,11 @@ export async function POST(req: NextRequest) {
     'ROL-EMS booking'
 
   if (!billingEmail) {
-    console.error('Webhook: no billing email found for session', sessionId)
+    console.error('Webhook: no billing email found. payload attrs:', JSON.stringify(attrs))
     return NextResponse.json({ received: true })
   }
+
+  console.log('Webhook: sending receipt email to', billingEmail, 'amount', amountPaid, 'session', sessionId)
 
   const name = attrs?.billing?.name || payment?.attributes?.billing?.name || 'Guest'
   const reference = metadata?.reference || sessionId || payment?.id || '—'
