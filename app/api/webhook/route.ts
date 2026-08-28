@@ -57,20 +57,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true })
   }
 
-  const payment = event?.data?.attributes?.data
-  const checkoutSession = payment?.attributes?.checkout_session || payment
-  const attrs = checkoutSession?.attributes || {}
-  const sessionId = checkoutSession?.id
+  // Event structure (authoritative PayMongo format):
+  // event.data.attributes.data = the checkout session object
+  //   .id      -> cs_xxx
+  //   .attributes.metadata  -> booking metadata we set at creation
+  //   .attributes.payments = [ { id, attributes: { amount, billing: { name, email }, ... } } ]
+  const session = event?.data?.attributes?.data
+  const attrs = session?.attributes || {}
+  const sessionId = session?.id
 
-  const embeddedPayment = attrs?.payment || payment?.attributes?.payment
-  let billingEmail: string | undefined = attrs?.billing?.email || payment?.attributes?.billing?.email
-  let amountPaid: number =
-    embeddedPayment?.attributes?.amount ||
-    payment?.attributes?.amount ||
-    payment?.attributes?.payment_intent?.attributes?.amount ||
-    0
+  const payments = Array.isArray(attrs?.payments) ? attrs?.payments : []
+  const firstPaid = payments.find(
+    (p: any) => p?.attributes?.status === 'paid',
+  ) || payments[0]
+
+  const billing = firstPaid?.attributes?.billing || attrs?.billing || {}
+  let billingEmail: string | undefined = billing?.email
+  let amountPaid: number = firstPaid?.attributes?.amount || attrs?.amount || 0
   const metadata = attrs?.metadata || {}
-  const lineItems = attrs?.line_items || payment?.attributes?.line_items || []
+  const lineItems = attrs?.line_items || []
   const description =
     metadata?.description ||
     (Array.isArray(lineItems) && lineItems[0]?.description) ||
@@ -78,14 +83,14 @@ export async function POST(req: NextRequest) {
     'ROL-EMS booking'
 
   if (!billingEmail) {
-    console.error('Webhook: no billing email found. payload attrs:', JSON.stringify(attrs))
+    console.error('Webhook: no billing email found. session attrs:', JSON.stringify(attrs))
     return NextResponse.json({ received: true })
   }
 
   console.log('Webhook: sending receipt email to', billingEmail, 'amount', amountPaid, 'session', sessionId)
 
-  const name = attrs?.billing?.name || payment?.attributes?.billing?.name || 'Guest'
-  const reference = metadata?.reference || sessionId || payment?.id || '—'
+  const name = billing?.name || 'Guest'
+  const reference = metadata?.reference || sessionId || event?.data?.id || '—'
   const date = metadata?.date
   const time = metadata?.time
   const guests = metadata?.guests
