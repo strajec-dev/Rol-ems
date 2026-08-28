@@ -1,3 +1,4 @@
 minimumReleaseAgeExclude:
   - '@next/*'
   - next
+  - nodemailer@9.0.6
