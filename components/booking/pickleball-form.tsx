@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CircleCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CircleCheck, Loader2, Wallet } from 'lucide-react'
 import { pickleballOptions, pickleballAvailability } from '@/lib/data'
 
 type Step = 'schedule' | 'details' | 'review' | 'confirm'
 
-const paymentMethods = ['Cash', 'GCash', 'Maya', 'Bank Transfer', 'Online Gateway']
+const paymentMethods = [
+  { id: 'online', label: 'Pay online (GCash, card, e-wallets)' },
+  { id: 'cash', label: 'Pay at the venue' },
+]
 
 const timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM']
 
@@ -25,7 +28,9 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
   const [players, setPlayers] = useState(2)
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
-  const [payment, setPayment] = useState('GCash')
+  const [email, setEmail] = useState('')
+  const [payment, setPayment] = useState('online')
+  const [paying, setPaying] = useState(false)
   const [confirmedRef, setConfirmedRef] = useState('')
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [timeOpen, setTimeOpen] = useState(false)
@@ -84,11 +89,50 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
   }
 
   const scheduleReady = date && time
-  const detailsReady = name.trim().length > 1 && contact.trim().length > 5
+  const nameValid = !/[^A-Za-z\s]/.test(name) && name.trim().length > 0
+  const contactValid = !/[^\d\s]/.test(contact) && contact.trim().length > 5
+  const emailValid = email === '' || /\S+@\S+\.\S+/.test(email)
+  const detailsReady = nameValid && contactValid && emailValid && (payment !== 'online' || email.trim().length > 0)
   const canNext =
     (step === 'schedule' && !!scheduleReady) ||
     (step === 'details' && detailsReady) ||
     step === 'review'
+
+  const doCheckout = async () => {
+    if (payment === 'cash') {
+      setConfirmedRef(`PB-${Math.floor(100000 + Math.random() * 900000)}`)
+      setStep('confirm')
+      return
+    }
+
+    const bookingLabel = `Pickleball · ${court.name} (${hours} hr${hours > 1 ? 's' : ''})`
+    setPaying(true)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          contact,
+          email,
+          amount: hourlyRate * hours,
+          description: `ROL-EMS · ${bookingLabel} · ${date} at ${time}`,
+          metadata: { booking: bookingLabel, date, time, hours, players },
+        }),
+      })
+      const data = await res.json()
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+        return
+      }
+      throw new Error(data.error || 'Payment could not start')
+    } catch (err) {
+      console.error(err)
+      alert('Something went wrong starting your payment. Please try again.')
+    } finally {
+      setPaying(false)
+    }
+  }
 
   const bookedSlots = date ? (pickleballAvailability[date] || []) : []
 
@@ -97,7 +141,7 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
   const reset = () => {
     setStep('schedule')
     setCourt(pickleballOptions[0])
-    setDate(''); setTime(''); setHours(1); setPlayers(2); setName(''); setContact(''); setPayment('GCash')
+    setDate(''); setTime(''); setHours(1); setPlayers(2); setName(''); setContact(''); setEmail(''); setPayment('online'); setPaying(false)
   }
 
   return (
@@ -280,8 +324,13 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Maria Santos"
-                  className="mt-2 w-full border border-[#222222]/20 bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336]"
+                  className={`mt-2 w-full border bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336] ${
+                    name === '' ? 'border-[#222222]/20' : nameValid ? 'border-green-600' : 'border-red-600'
+                  }`}
                 />
+                {name !== '' && !nameValid && (
+                  <span className="mt-1.5 block text-[10px] text-red-600">Letters only — no numbers or symbols.</span>
+                )}
               </label>
               <label className="block">
                 <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Contact number</span>
@@ -290,8 +339,28 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
                   placeholder="e.g. 0917 123 4567"
-                  className="mt-2 w-full border border-[#222222]/20 bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336]"
+                  className={`mt-2 w-full border bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336] ${
+                    contact === '' ? 'border-[#222222]/20' : contactValid ? 'border-green-600' : 'border-red-600'
+                  }`}
                 />
+                {contact !== '' && !contactValid && (
+                  <span className="mt-1.5 block text-[10px] text-red-600">Numbers only — no letters or symbols.</span>
+                )}
+              </label>
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Email {payment === 'online' ? <span className="normal-case text-red-600">(required for online payment)</span> : <span className="normal-case text-[#6B756B]/60">(optional)</span>}</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="e.g. maria@gmail.com"
+                  className={`mt-2 w-full border bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336] ${
+                    email === '' ? 'border-[#222222]/20' : emailValid ? 'border-green-600' : 'border-red-600'
+                  }`}
+                />
+                {email !== '' && !emailValid && (
+                  <span className="mt-1.5 block text-[10px] text-red-600">Please enter a valid email address.</span>
+                )}
               </label>
             </div>
           </>
@@ -323,23 +392,36 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                 <span>{name} · {contact}</span>
               </div>
               <div className="flex justify-between px-4 py-3 text-sm">
+                <span className="text-[#6B756B]">Email</span>
+                <span>{email || '—'}</span>
+              </div>
+              <div className="flex justify-between px-4 py-3 text-sm">
                 <span className="text-[#6B756B]">Total</span>
                 <span className="font-bold text-[#1E5336]">{totalPrice}</span>
               </div>
             </div>
             <div className="mt-6">
               <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Payment method</span>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-col gap-2">
                 {paymentMethods.map((m) => (
                   <button
-                    key={m}
-                    onClick={() => setPayment(m)}
-                    className={`border px-3 py-2 text-[10px] uppercase tracking-[0.1em] ${payment === m ? 'border-[#1E5336] bg-[#1E5336] text-[#FDFBF7]' : 'border-[#222222]/20 text-[#6B756B]'}`}
+                    key={m.id}
+                    onClick={() => setPayment(m.id)}
+                    className={`flex w-full items-center justify-between border px-4 py-3 text-left text-sm transition ${payment === m.id ? 'border-[#1E5336] bg-[#F3F0EC] text-[#1E5336]' : 'border-[#222222]/20 text-[#6B756B] hover:border-[#1E5336]/40'}`}
                   >
-                    {m}
+                    <span className="flex items-center gap-2.5">
+                      {m.id === 'online' ? <Wallet size={16} /> : <span className="h-4 w-4 rounded-full border border-current" />}
+                      {m.label}
+                    </span>
+                    <span className={`h-3 w-3 rounded-full border border-current ${payment === m.id ? 'bg-current' : ''}`} />
                   </button>
                 ))}
               </div>
+              {payment === 'online' && (
+                <p className="mt-2 text-[10px] text-[#6B756B]">
+                  You&apos;ll be redirected to our payment page to pay by GCash, card, PayPal, or other e-wallets.
+                </p>
+              )}
             </div>
           </>
         )}
@@ -358,7 +440,7 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Court</span><span>{court.name}</span></div>
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Date</span><span>{date} · {time}</span></div>
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Players</span><span>{players}</span></div>
-              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Payment</span><span>{payment}</span></div>
+              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Payment</span><span>{payment === 'online' ? 'Online (GCash / card)' : 'Pay at the venue'}</span></div>
               <div className="flex justify-between border-t border-[#222222]/15 pt-2 mt-2"><span className="text-[#6B756B]">Total</span><span className="font-bold text-[#1E5336]">{totalPrice}</span></div>
             </div>
           </div>
@@ -373,11 +455,17 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
             </button>
           ) : <span />}
           <button
-            onClick={canNext ? goNext : undefined}
-            disabled={!canNext}
-            className={`flex items-center gap-2 px-6 py-3 text-[10px] uppercase tracking-[0.16em] transition ${canNext ? 'bg-[#1E5336] text-[#FDFBF7] hover:bg-[#153d27]' : 'cursor-not-allowed bg-[#222222]/10 text-[#6B756B]'}`}
+            onClick={canNext ? (step === 'review' ? doCheckout : goNext) : undefined}
+            disabled={!canNext || paying}
+            className={`flex items-center gap-2 px-6 py-3 text-[10px] uppercase tracking-[0.16em] transition ${canNext && !paying ? 'bg-[#1E5336] text-[#FDFBF7] hover:bg-[#153d27]' : 'cursor-not-allowed bg-[#222222]/10 text-[#6B756B]'}`}
           >
-            {step === 'review' ? 'Confirm & book' : 'Continue'} <ArrowRight size={14} />
+            {paying ? (
+              <><Loader2 size={14} className="animate-spin" /> Starting payment…</>
+            ) : step === 'review' ? (
+              payment === 'online' ? 'Pay now' : 'Confirm & book'
+            ) : (
+              <>Continue <ArrowRight size={14} /></>
+            )}
           </button>
         </div>
       )}
