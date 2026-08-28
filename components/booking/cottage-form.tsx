@@ -167,7 +167,8 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
       throw new Error(data.error || 'Payment could not start')
     } catch (err) {
       console.error(err)
-      alert('Something went wrong starting your payment. Please try again.')
+      const msg = err instanceof Error && err.message ? err.message : 'Something went wrong starting your payment. Please try again.'
+      alert(msg)
     } finally {
       setPaying(false)
     }
