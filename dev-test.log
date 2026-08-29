@@ -1,0 +1,17 @@
+
+> my-project@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.15:3000
+- Environments: .env.local
+✓ Ready in 797ms
+⚠ Warning: Next.js ignored pnpm-workspace.yaml in C:\Users\user\OneDrive\Desktop\Folders because it is outside the current Git repository (C:\Users\user\OneDrive\Desktop\Folders\rol-ems).
+ To use this directory, set `turbopack.root` in your Next.js config.
+
+✓ Running next.config.mjs took 25ms
+
+ POST /api/checkout 200 in 1153ms (next.js: 489ms, application-code: 664ms)
+ GET /api/receipt?session_id=cs_983b6ca17ac31eb0a0185ecd 200 in 5.8s (next.js: 1872ms, application-code: 3.9s)
+[?25h

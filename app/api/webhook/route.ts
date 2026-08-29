@@ -51,18 +51,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
-  const eventType = event?.data?.attributes?.type
+  const eventData = event?.data?.attributes || {}
+  const eventType = eventData?.type || event?.data?.type
   console.log('Webhook received, type:', eventType)
   if (eventType !== 'checkout_session.payment.paid') {
     return NextResponse.json({ received: true })
   }
 
-  // Event structure (authoritative PayMongo format):
-  // event.data.attributes.data = the checkout session object
-  //   .id      -> cs_xxx
-  //   .attributes.metadata  -> booking metadata we set at creation
-  //   .attributes.payments = [ { id, attributes: { amount, billing: { name, email }, ... } } ]
-  const session = event?.data?.attributes?.data
+  // PayMongo delivers the session object in one of two shapes:
+  //   1) event.data.attributes.data = session   (JSON:API)
+  //   2) event.data.data            = session   (flattened)
+  const session = eventData?.data || event?.data?.data
   const attrs = session?.attributes || {}
   const sessionId = session?.id
 
@@ -72,9 +71,9 @@ export async function POST(req: NextRequest) {
   ) || payments[0]
 
   const billing = firstPaid?.attributes?.billing || attrs?.billing || {}
-  let billingEmail: string | undefined = billing?.email
-  let amountPaid: number = firstPaid?.attributes?.amount || attrs?.amount || 0
   const metadata = attrs?.metadata || {}
+  let billingEmail: string | undefined = billing?.email || metadata?.email
+  let amountPaid: number = firstPaid?.attributes?.amount || attrs?.amount || 0
   const lineItems = attrs?.line_items || []
   const description =
     metadata?.description ||

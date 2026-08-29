@@ -6,15 +6,22 @@ import { useSearchParams } from 'next/navigation'
 
 function SuccessContent() {
   const searchParams = useSearchParams()
-  const sessionId = searchParams.get('session_id')
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [receiptStatus, setReceiptStatus] = useState<'sending' | 'sent' | 'skipped'>('sending')
   const attempt = useRef(0)
 
   useEffect(() => {
-    if (!sessionId) {
+    const id = searchParams.get('session_id') || (typeof window !== 'undefined' ? localStorage.getItem('paymongo_session_id') : null)
+    if (id) {
+      setSessionId(id)
+      if (typeof window !== 'undefined') localStorage.removeItem('paymongo_session_id')
+    } else {
       setReceiptStatus('skipped')
-      return
     }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!sessionId) return
     let cancelled = false
     const send = () => {
       attempt.current += 1

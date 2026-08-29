@@ -34,13 +34,13 @@ export async function GET(req: NextRequest) {
     const firstPaid = payments.find((p: any) => p?.attributes?.status === 'paid') || payments[0]
 
     const billing = firstPaid?.attributes?.billing || attrs?.billing || {}
-    const billingEmail: string | undefined = billing?.email
+    const metadata = attrs?.metadata || {}
+    const billingEmail: string | undefined = billing?.email || metadata?.email
     if (!billingEmail) {
       return NextResponse.json({ error: 'No billing email' }, { status: 400 })
     }
 
     const amountPaid: number = firstPaid?.attributes?.amount || attrs?.amount || 0
-    const metadata = attrs?.metadata || {}
     const lineItems = attrs?.line_items || []
     const description =
       metadata?.description ||

@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     ...(metadata || {}),
     reference,
     description: description || 'ROL-EMS booking',
+    ...(email ? { email } : {}),
   }
 
   const payload = {
