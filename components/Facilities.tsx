@@ -43,8 +43,12 @@ export default function Facilities() {
               item.title === 'Cottage & Event'
                 ? '/cottage'
                 : item.title === 'Pickleball'
-                  ? 'https://rol-ems-pickleball.vercel.app/'
-                  : null
+                  ? '/pickleball'
+                  : item.title === 'Badminton'
+                    ? '/badminton'
+                    : item.title === 'Taekwondo'
+                      ? '/taekwondo'
+                      : null
 
             const card = (
               <article key={item.title} className="group">

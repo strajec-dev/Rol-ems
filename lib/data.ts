@@ -72,6 +72,16 @@ export const pickleballOptions: CottageType[] = [
   { name: 'Court 02', detail: 'Standard pickleball court', price: '₱350 / hour', image: '/sports-events/pickleball.jpg' },
 ]
 
+export const badmintonOptions: CottageType[] = [
+  { name: 'Court 01', detail: 'Air-conditioned badminton court', price: '₱300 / hour', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Court 02', detail: 'Air-conditioned badminton court', price: '₱300 / hour', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=85' },
+]
+
+export const taekwondoOptions: CottageType[] = [
+  { name: 'Training Floor 01', detail: 'Taekwondo training floor', price: '₱250 / hour', image: '/sports-events/teakwondo.jpg' },
+  { name: 'Training Floor 02', detail: 'Taekwondo training floor', price: '₱250 / hour', image: '/sports-events/teakwondo.jpg' },
+]
+
 // Real-time availability (simulated). Keys are ISO dates; values are start times
 // (e.g. '10:00 AM') already booked on that court that day.
 export const pickleballAvailability: Record<string, string[]> = {

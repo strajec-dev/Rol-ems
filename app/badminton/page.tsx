@@ -2,9 +2,9 @@
 
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import PickleballBookingForm from '@/components/booking/pickleball-form'
+import BadmintonBookingForm from '@/components/badminton/badminton-form'
 
-export default function PickleballPage() {
+export default function BadmintonPage() {
   const router = useRouter()
 
   return (
@@ -27,17 +27,17 @@ export default function PickleballPage() {
         >
           <ArrowLeft size={14} /> Back to Stay & play
         </button>
-        <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Pickleball</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Badminton</p>
         <h1 className="mt-4 font-serif text-5xl leading-[0.95] tracking-[-0.05em] text-[#1E5336] sm:text-6xl">
-          Book a court, hit the open line.
+          Smash, rally, repeat.
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-6 text-[#6B756B]">
-          Reserve a pickleball court by the hour, check live availability, or join the open play queue at ROL-EMS Resort.
+          Reserve an air-conditioned badminton court by the hour at Rebar Sports Center. Rackets and shuttlecocks available.
         </p>
       </section>
 
       <section className="mx-auto max-w-2xl px-6 pb-16">
-        <PickleballBookingForm onDone={() => router.push('/#facilities')} />
+        <BadmintonBookingForm onDone={() => router.push('/#facilities')} />
       </section>
     </main>
   )

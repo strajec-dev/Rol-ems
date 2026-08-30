@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import CottageBookingForm from '@/components/booking/cottage-form'
+import CottageBookingForm from '@/components/cottage/cottage-form'
 
 export default function CottagePage() {
   const router = useRouter()

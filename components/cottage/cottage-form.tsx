@@ -283,18 +283,35 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                     <p className="mt-3 text-sm font-bold text-[#1E5336]">{cottage.price} / night</p>
                   </button>
                 </div>
+
+                <div className="mt-8">
+                  <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Choose your cottage</span>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                    {cottageOptions.map((c) => (
+                      <button
+                        key={c.name}
+                        onClick={() => setCottage(c)}
+                        className={`p-4 text-left transition ${cottage.name === c.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+                      >
+                        <p className="font-serif text-lg text-[#1E5336]">{c.name}</p>
+                        <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{c.detail}</p>
+                        <p className="mt-3 text-sm font-bold text-[#1E5336]">{c.price}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
             {kind === 'event' && (
               <div className="mt-6">
                 <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Choose your venue</span>
-                <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   {eventVenues.map((v) => (
                     <button
                       key={v.name}
                       onClick={() => setVenue(v)}
-                      className={`p-4 text-left transition ${venue.name === v.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+                      className={`p-5 text-left transition ${venue.name === v.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
                     >
                       <p className="font-serif text-lg text-[#1E5336]">{v.name}</p>
                       <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{v.detail}</p>
