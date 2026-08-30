@@ -57,11 +57,14 @@ export type CottageType = {
 }
 
 export const cottageOptions: CottageType[] = [
+  { name: 'Kubo Cottage', detail: 'Beachside nipa-hut cottage', price: '₱1,800 / day', image: '/sports-events/cottage.jpg' },
   { name: 'Beach Cottage', detail: 'Beachside cottage rental · kubo style', price: '₱2,500 / day', image: '/sports-events/cottage.jpg' },
+  { name: 'Family Cottage', detail: 'Larger cottage for families & groups', price: '₱3,500 / day', image: '/sports-events/cottage.jpg' },
 ]
 
 export const eventVenues: CottageType[] = [
-  { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: 'Event fee on request', image: '/sports-events/cottage.jpg' },
+  { name: 'Half-Area Venue', detail: 'Half of the resort for smaller events', price: '₱12,000 / day', image: '/sports-events/cottage.jpg' },
+  { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: '₱20,000 / day', image: '/sports-events/cottage.jpg' },
 ]
 
 export const pickleballOptions: CottageType[] = [

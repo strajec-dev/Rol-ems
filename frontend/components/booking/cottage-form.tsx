@@ -1,31 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CircleCheck, Loader2, Wallet } from 'lucide-react'
-import { pickleballOptions, pickleballAvailability } from '@/lib/data'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Loader2, Wallet } from 'lucide-react'
+import { cottageOptions, eventVenues } from '@/lib/data'
+import { addBooking, isSlotAvailable } from '@/lib/bookings'
 
-type Step = 'schedule' | 'details' | 'review' | 'confirm'
+type Step = 'type' | 'schedule' | 'details' | 'review' | 'confirm'
+
+type BookingType = 'day' | 'overnight' | 'event'
+
+type BookingKind = 'cottage' | 'event'
 
 const paymentMethods = [
   { id: 'online', label: 'Pay online (GCash, card, e-wallets)' },
   { id: 'cash', label: 'Pay at the venue' },
 ]
 
-const timeSlots = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM']
+const timeSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM']
 
 const steps: { key: Step; label: string }[] = [
+  { key: 'type', label: 'Booking' },
   { key: 'schedule', label: 'Date & Time' },
   { key: 'details', label: 'Your details' },
   { key: 'review', label: 'Review & pay' },
 ]
 
-export default function PickleballBookingForm({ onDone }: { onDone: () => void }) {
-  const [step, setStep] = useState<Step>('schedule')
-  const [court, setCourt] = useState(pickleballOptions[0])
+export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState<Step>('type')
+  const [kind, setKind] = useState<BookingKind>('cottage')
+  const [bookingType, setBookingType] = useState<BookingType>('day')
+  const [cottage, setCottage] = useState(cottageOptions[0])
+  const [venue, setVenue] = useState(eventVenues[0])
+  const [nights, setNights] = useState(1)
+  const [eventDetails, setEventDetails] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
-  const [hours, setHours] = useState(1)
-  const [players, setPlayers] = useState(2)
+  const [guests, setGuests] = useState(4)
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
   const [email, setEmail] = useState('')
@@ -38,13 +48,6 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
-
-  const rateNumber = (label: string) => {
-    const m = label.match(/₱([\d,]+)/)
-    return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0
-  }
-  const hourlyRate = rateNumber(court.price)
-  const totalPrice = `₱${(hourlyRate * hours).toLocaleString()} / ${hours} hr${hours > 1 ? 's' : ''}`
 
   const isoDate = (d: Date) => {
     const y = d.getFullYear()
@@ -75,37 +78,91 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
   }
 
   const goNext = () => {
-    if (step === 'schedule') setStep('details')
+    if (step === 'type') setStep('schedule')
+    else if (step === 'schedule') setStep('details')
     else if (step === 'details') setStep('review')
-    else if (step === 'review') {
-      setConfirmedRef(`PB-${Math.floor(100000 + Math.random() * 900000)}`)
-      setStep('confirm')
-    }
+  }
+
+  const persistBooking = () => {
+    const label =
+      kind === 'event'
+        ? `Event · ${venue.name}`
+        : bookingType === 'overnight'
+        ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})`
+        : `Cottage · ${cottage.name} (day rental)`
+    const facilityKey = kind === 'event' ? `event:${venue.name}` : `cottage:${cottage.name}`
+    const record = addBooking({
+      facility: facilityKey,
+      itemName: label,
+      date,
+      time,
+      nights: kind === 'event' ? undefined : nights,
+      guests,
+      name,
+      contact,
+      email,
+      amount: chargeAmount,
+      payment,
+    })
+    setConfirmedRef(record.reference)
   }
 
   const goBack = () => {
-    if (step === 'details') setStep('schedule')
+    if (step === 'schedule') setStep('type')
+    else if (step === 'details') setStep('schedule')
     else if (step === 'review') setStep('details')
   }
 
-  const scheduleReady = date && time
+  const rateNumber = (label: string) => {
+    const m = label.match(/₱([\d,]+)/)
+    return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0
+  }
+  const baseRate = rateNumber(cottage.price)
+  const eventRate = rateNumber(venue.price)
+
+  let chargeAmount = 0
+  let totalPrice = ''
+  if (kind === 'event') {
+    chargeAmount = eventRate
+    totalPrice = chargeAmount > 0 ? `₱${chargeAmount.toLocaleString()} / event` : 'Event fee on request'
+  } else {
+    chargeAmount = baseRate * nights
+    totalPrice =
+      bookingType === 'overnight'
+        ? `₱${(baseRate * nights).toLocaleString()} / ${nights} night${nights > 1 ? 's' : ''}`
+        : cottage.price
+  }
+
+  const facilityKey = kind === 'event' ? `event:${venue.name}` : `cottage:${cottage.name}`
+  const slotTaken = date && time ? !isSlotAvailable(facilityKey, date, time) : false
+
+  const scheduleReady = date && time && !slotTaken
   const nameValid = !/[^A-Za-z\s]/.test(name) && name.trim().length > 0
   const contactValid = !/[^\d\s]/.test(contact) && contact.trim().length > 5
   const emailValid = email === '' || /\S+@\S+\.\S+/.test(email)
   const detailsReady = nameValid && contactValid && emailValid && (payment !== 'online' || email.trim().length > 0)
   const canNext =
+    (step === 'type') ||
     (step === 'schedule' && !!scheduleReady) ||
     (step === 'details' && detailsReady) ||
-    step === 'review'
+    (step === 'review' && chargeAmount > 0)
 
   const doCheckout = async () => {
     if (payment === 'cash') {
-      setConfirmedRef(`PB-${Math.floor(100000 + Math.random() * 900000)}`)
+      persistBooking()
       setStep('confirm')
       return
     }
 
-    const bookingLabel = `Pickleball · ${court.name} (${hours} hr${hours > 1 ? 's' : ''})`
+    persistBooking()
+
+    const bookingLabel =
+      kind === 'event'
+        ? `Event · ${venue.name}`
+        : bookingType === 'overnight'
+        ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})`
+        : `Cottage · ${cottage.name} (day rental)`
+
     setPaying(true)
     try {
       const res = await fetch('/api/checkout', {
@@ -115,9 +172,16 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
           name,
           contact,
           email,
-          amount: hourlyRate * hours,
+          amount: chargeAmount,
           description: `ROL-EMS · ${bookingLabel} · ${date} at ${time}`,
-          metadata: { booking: bookingLabel, date, time, hours, players },
+          metadata: {
+            booking: bookingLabel,
+            date,
+            time,
+            guests,
+            nights: kind === 'event' ? undefined : nights,
+            eventDetails: kind === 'event' ? eventDetails : undefined,
+          },
         }),
       })
       const data = await res.json()
@@ -136,14 +200,17 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
     }
   }
 
-  const bookedSlots = date ? (pickleballAvailability[date] || []) : []
-
   const currentIndex = steps.findIndex((s) => s.key === step)
 
   const reset = () => {
-    setStep('schedule')
-    setCourt(pickleballOptions[0])
-    setDate(''); setTime(''); setHours(1); setPlayers(2); setName(''); setContact(''); setEmail(''); setPayment('online'); setPaying(false)
+    setStep('type')
+    setKind('cottage')
+    setBookingType('day')
+    setCottage(cottageOptions[0])
+    setVenue(eventVenues[0])
+    setNights(1)
+    setEventDetails('')
+    setDate(''); setTime(''); setGuests(4); setName(''); setContact(''); setEmail(''); setPayment('online'); setPaying(false)
   }
 
   return (
@@ -174,31 +241,76 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
       )}
 
       <div className="px-6 py-6">
-        {step === 'schedule' && (
+        {step === 'type' && (
           <>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Step 1 · Pick your court</p>
-            <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">Which pickleball court?</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {pickleballOptions.map((c) => (
-                <button
-                  key={c.name}
-                  onClick={() => setCourt(c)}
-                  className={`p-5 text-left transition ${court.name === c.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-serif text-lg text-[#1E5336]">{c.name}</p>
-                    <span className="flex items-center gap-1 text-[9px] uppercase tracking-[0.12em] text-[#1E5336]">
-                      <CircleCheck size={12} /> Available
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{c.detail}</p>
-                  <p className="mt-3 text-sm font-bold text-[#1E5336]">{c.price}</p>
-                </button>
-              ))}
+            <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Step 1 · Choose your booking</p>
+            <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">What are you booking?</h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => setKind('cottage')}
+                className={`p-5 text-left transition ${kind === 'cottage' ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+              >
+                <p className="font-serif text-lg text-[#1E5336]">Cottage</p>
+                <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">Rent a cottage by the beach</p>
+              </button>
+              <button
+                onClick={() => setKind('event')}
+                className={`p-5 text-left transition ${kind === 'event' ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+              >
+                <p className="font-serif text-lg text-[#1E5336]">Event</p>
+                <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">Whole-area / event venue</p>
+              </button>
             </div>
 
-            <p className="mt-8 text-xs uppercase tracking-[0.18em] text-[#E1A728]">Step 2 · Date & time</p>
-            <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">When are you playing?</h2>
+            {kind === 'cottage' && (
+              <div className="mt-6">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">How long are you renting?</span>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <button
+                    onClick={() => setBookingType('day')}
+                    className={`p-5 text-left transition ${bookingType === 'day' ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+                  >
+                    <p className="font-serif text-lg text-[#1E5336]">Day rental</p>
+                    <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">Day trip · check out same day</p>
+                    <p className="mt-3 text-sm font-bold text-[#1E5336]">{cottage.price}</p>
+                  </button>
+                  <button
+                    onClick={() => { setBookingType('overnight'); setNights(1) }}
+                    className={`p-5 text-left transition ${bookingType === 'overnight' ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+                  >
+                    <p className="font-serif text-lg text-[#1E5336]">Overnight</p>
+                    <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">Stay overnight · pick nights</p>
+                    <p className="mt-3 text-sm font-bold text-[#1E5336]">{cottage.price} / night</p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {kind === 'event' && (
+              <div className="mt-6">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Choose your venue</span>
+                <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                  {eventVenues.map((v) => (
+                    <button
+                      key={v.name}
+                      onClick={() => setVenue(v)}
+                      className={`p-4 text-left transition ${venue.name === v.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
+                    >
+                      <p className="font-serif text-lg text-[#1E5336]">{v.name}</p>
+                      <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{v.detail}</p>
+                      <p className="mt-3 text-sm font-bold text-[#1E5336]">{v.price}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {step === 'schedule' && (
+          <>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Step 2 · Reservation date & time</p>
+            <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">When are you coming?</h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="relative block">
                 <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Date</span>
@@ -253,7 +365,7 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                 )}
               </div>
               <div className="relative block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Start time</span>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Arrival time</span>
                 <button
                   type="button"
                   onClick={() => setTimeOpen((v) => !v)}
@@ -265,7 +377,7 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                 {timeOpen && (
                   <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-56 overflow-y-auto border border-[#222222]/15 bg-[#FDFBF7] p-2 shadow-xl">
                     {timeSlots.map((slot) => {
-                      const taken = date ? bookedSlots.includes(slot) : false
+                      const taken = date ? !isSlotAvailable(facilityKey, date, slot) : false
                       return (
                         <button
                           key={slot}
@@ -292,32 +404,43 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                 )}
               </div>
             </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Duration (hours)</span>
-                <div className="mt-2 flex items-center gap-3">
-                  <button onClick={() => setHours((h) => Math.max(1, h - 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">−</button>
-                  <span className="w-10 text-center text-xl font-bold text-[#1E5336]">{hours}</span>
-                  <button onClick={() => setHours((h) => Math.min(4, h + 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">+</button>
-                </div>
-              </div>
-              <div className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Players</span>
-                <div className="mt-2 flex items-center gap-3">
-                  <button onClick={() => setPlayers((p) => Math.max(2, p - 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">−</button>
-                  <span className="w-10 text-center text-xl font-bold text-[#1E5336]">{players}</span>
-                  <button onClick={() => setPlayers((p) => Math.min(8, p + 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">+</button>
-                </div>
+            <div className="mt-6">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Guests (up to {kind === 'event' ? 50 : 8})</span>
+              <div className="mt-2 flex items-center gap-3">
+                <button onClick={() => setGuests((g) => Math.max(1, g - 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">−</button>
+                <span className="w-10 text-center text-xl font-bold text-[#1E5336]">{guests}</span>
+                <button onClick={() => setGuests((g) => Math.min(kind === 'event' ? 50 : 8, g + 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">+</button>
               </div>
             </div>
+            {bookingType === 'overnight' && (
+              <div className="mt-6">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Number of nights</span>
+                <div className="mt-2 flex items-center gap-3">
+                  <button onClick={() => setNights((n) => Math.max(1, n - 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">−</button>
+                  <span className="w-10 text-center text-xl font-bold text-[#1E5336]">{nights}</span>
+                  <button onClick={() => setNights((n) => Math.min(14, n + 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">+</button>
+                </div>
+              </div>
+            )}
+            {kind === 'event' && (
+              <div className="mt-6">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Event type</span>
+                <input
+                  type="text"
+                  value={eventDetails}
+                  onChange={(e) => setEventDetails(e.target.value)}
+                  placeholder="e.g. Wedding, birthday, team building"
+                  className="mt-2 w-full border border-[#222222]/20 bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336]"
+                />
+              </div>
+            )}
           </>
         )}
 
         {step === 'details' && (
           <>
             <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Step 3 · Your details</p>
-            <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">Who is reserving the court?</h2>
+            <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">Who is the booking for?</h2>
             <div className="mt-6 grid gap-4">
               <label className="block">
                 <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Full name</span>
@@ -363,6 +486,7 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
                 {email !== '' && !emailValid && (
                   <span className="mt-1.5 block text-[10px] text-red-600">Please enter a valid email address.</span>
                 )}
+                <span className="mt-1.5 block text-[10px] text-[#6B756B]/70">We'll send your receipt and confirmation here after booking.</span>
               </label>
             </div>
           </>
@@ -374,23 +498,29 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
             <h2 className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">Almost there.</h2>
             <div className="mt-6 divide-y divide-[#222222]/10 border border-[#222222]/15">
               <div className="flex justify-between px-4 py-3 text-sm">
-                <span className="text-[#6B756B]">Court</span>
-                <span>{court.name}</span>
+                <span className="text-[#6B756B]">Booking</span>
+                <span>{kind === 'event' ? 'Event' : bookingType === 'day' ? 'Day rental' : `Overnight · ${nights} night${nights > 1 ? 's' : ''}`}</span>
+              </div>
+              <div className="flex justify-between px-4 py-3 text-sm">
+                <span className="text-[#6B756B]">Cottage / venue</span>
+                <span>{kind === 'event' ? venue.name : cottage.name}</span>
               </div>
               <div className="flex justify-between px-4 py-3 text-sm">
                 <span className="text-[#6B756B]">Date & time</span>
                 <span>{date} · {time}</span>
               </div>
               <div className="flex justify-between px-4 py-3 text-sm">
-                <span className="text-[#6B756B]">Duration</span>
-                <span>{hours} hr{hours > 1 ? 's' : ''}</span>
+                <span className="text-[#6B756B]">Guests</span>
+                <span>{guests}</span>
               </div>
+              {kind === 'event' && (
+                <div className="flex justify-between px-4 py-3 text-sm">
+                  <span className="text-[#6B756B]">Event</span>
+                  <span>{eventDetails || '—'}</span>
+                </div>
+              )}
               <div className="flex justify-between px-4 py-3 text-sm">
-                <span className="text-[#6B756B]">Players</span>
-                <span>{players}</span>
-              </div>
-              <div className="flex justify-between px-4 py-3 text-sm">
-                <span className="text-[#6B756B]">Reserved by</span>
+                <span className="text-[#6B756B]">Guest</span>
                 <span>{name} · {contact}</span>
               </div>
               <div className="flex justify-between px-4 py-3 text-sm">
@@ -433,15 +563,14 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1E5336] text-[#FDFBF7]">
               <Check size={26} />
             </span>
-            <h2 className="mt-5 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">Court reserved</h2>
+            <h2 className="mt-5 font-serif text-3xl tracking-[-0.04em] text-[#1E5336]">Reservation confirmed</h2>
             <p className="mt-3 max-w-sm text-sm leading-6 text-[#6B756B]">
-              {court.name} is on hold for {date} at {time}. A confirmation and receipt have been sent.
+              Your {kind === 'event' ? 'event venue' : 'cottage rental'} is on hold for {date} at {time}. A confirmation and receipt have been sent.
             </p>
             <div className="mt-6 w-full max-w-sm border border-[#222222]/15 p-4 text-left text-sm">
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Reference</span><span className="font-bold text-[#1E5336]">{confirmedRef}</span></div>
-              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Court</span><span>{court.name}</span></div>
-              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Date</span><span>{date} · {time}</span></div>
-              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Players</span><span>{players}</span></div>
+              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Booking</span><span>{kind === 'event' ? 'Event' : bookingType === 'day' ? 'Day rental' : `Overnight · ${nights} night${nights > 1 ? 's' : ''}`}</span></div>
+              <div className="flex justify-between py-1"><span className="text-[#6B756B]">Guest</span><span>{name}</span></div>
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Payment</span><span>{payment === 'online' ? 'Online (GCash / card)' : 'Pay at the venue'}</span></div>
               <div className="flex justify-between border-t border-[#222222]/15 pt-2 mt-2"><span className="text-[#6B756B]">Total</span><span className="font-bold text-[#1E5336]">{totalPrice}</span></div>
             </div>
@@ -451,7 +580,7 @@ export default function PickleballBookingForm({ onDone }: { onDone: () => void }
 
       {step !== 'confirm' && (
         <div className="flex items-center justify-between border-t border-[#222222]/10 px-6 py-5">
-          {step !== 'schedule' ? (
+          {step !== 'type' ? (
             <button onClick={goBack} className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">
               <ArrowLeft size={14} /> Back
             </button>
