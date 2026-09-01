@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendReceiptEmail } from '@/lib/email'
+import { prisma } from '@/lib/prisma'
 
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2)
@@ -93,6 +94,15 @@ export async function POST(req: NextRequest) {
   const date = metadata?.date
   const time = metadata?.time
   const guests = metadata?.guests
+
+  try {
+    await prisma.booking.updateMany({
+      where: { reference },
+      data: { status: 'confirmed' },
+    })
+  } catch (err) {
+    console.error('Webhook: failed to confirm booking in DB', err)
+  }
 
   try {
     await sendReceiptEmail(billingEmail, {

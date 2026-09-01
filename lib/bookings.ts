@@ -12,14 +12,8 @@ export type BookingRecord = {
   email?: string
   amount: number
   payment: string
+  status: string
   createdAt: string
-}
-
-const STORAGE_KEY = 'rol-ems-bookings'
-
-export type ConflictingRange = {
-  start: number
-  end: number
 }
 
 const toMinutes = (timeLabel: string): number => {
@@ -33,43 +27,74 @@ const toMinutes = (timeLabel: string): number => {
   return h * 60 + min
 }
 
-export function getBookings(): BookingRecord[] {
-  if (typeof window === 'undefined') return []
+export async function getBookings(): Promise<BookingRecord[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as BookingRecord[]) : []
+    const res = await fetch('/api/bookings', { cache: 'no-store' })
+    if (!res.ok) return []
+    return await res.json()
   } catch {
     return []
   }
 }
 
-function saveBookings(list: BookingRecord[]) {
+export async function getBookedTimes(facility: string, date: string, nights: number = 1): Promise<string[]> {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+    const params = new URLSearchParams({
+      facility,
+      date,
+      nights: String(nights),
+    })
+    const res = await fetch(
+      `/api/bookings/availability/booked?${params.toString()}`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data.times) ? data.times : []
   } catch {
-    /* storage unavailable */
+    return []
   }
 }
 
-export function isSlotAvailable(facility: string, date: string, time: string, durationMinutes: number = 0): boolean {
-  const list = getBookings()
-  const wanted: ConflictingRange = { start: toMinutes(time), end: toMinutes(time) + durationMinutes }
-  return !list.some((b) => {
-    if (b.facility !== facility || b.date !== date) return false
-    const existing: ConflictingRange = { start: toMinutes(b.time), end: toMinutes(b.time) }
-    return wanted.start < existing.end && existing.start < wanted.end
+export async function getBlockedDates(facility: string, month: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      `/api/bookings/availability/calendar?facility=${encodeURIComponent(facility)}&month=${encodeURIComponent(month)}`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data.dates) ? data.dates : []
+  } catch {
+    return []
+  }
+}
+
+export function isTimeTaken(
+  time: string,
+  bookedTimes: string[],
+  durationMinutes: number = 0,
+): boolean {
+  const wanted = { start: toMinutes(time), end: toMinutes(time) + durationMinutes }
+  return bookedTimes.some((bt) => {
+    const ex = { start: toMinutes(bt), end: toMinutes(bt) }
+    return wanted.start < ex.end && ex.start < wanted.end
   })
 }
 
-export function addBooking(booking: Omit<BookingRecord, 'reference' | 'createdAt'>): BookingRecord {
-  const ref = `ROL-${Math.floor(100000 + Math.random() * 900000)}`
-  const record: BookingRecord = {
-    ...booking,
-    reference: ref,
-    createdAt: new Date().toISOString(),
+export async function addBooking(
+  booking: Omit<BookingRecord, 'reference' | 'createdAt' | 'status'>,
+): Promise<BookingRecord> {
+  const res = await fetch('/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(booking),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    const err = new Error(data?.error || 'Could not create booking') as Error & { conflict?: boolean }
+    if (res.status === 409) err.conflict = true
+    throw err
   }
-  const list = getBookings()
-  list.push(record)
-  saveBookings(list)
-  return record
+  return await res.json()
 }

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CircleCheck, Loader2, Wallet } from 'lucide-react'
 import { taekwondoOptions } from '@/lib/data'
-import { addBooking, isSlotAvailable } from '@/lib/bookings'
+import { addBooking, getBookedTimes, isTimeTaken } from '@/lib/bookings'
 
 type Step = 'schedule' | 'details' | 'review' | 'confirm'
 
@@ -39,6 +39,28 @@ export default function TaekwondoBookingForm({ onDone }: { onDone: () => void })
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
+  const facilityKey = `taekwondo:${floor.name}`
+  const [bookedTimes, setBookedTimes] = useState<string[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    if (!date) {
+      setBookedTimes([])
+      return
+    }
+    setLoadingSlots(true)
+    getBookedTimes(facilityKey, date)
+      .then((times) => {
+        if (active) setBookedTimes(times)
+      })
+      .finally(() => {
+        if (active) setLoadingSlots(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [facilityKey, date])
 
   const rateNumber = (label: string) => {
     const m = label.match(/₱([\d,]+)/)
@@ -80,11 +102,9 @@ export default function TaekwondoBookingForm({ onDone }: { onDone: () => void })
     else if (step === 'details') setStep('review')
   }
 
-  const facilityKey = `taekwondo:${floor.name}`
-
-  const persistBooking = () => {
+  const persistBooking = async () => {
     const label = `Taekwondo · ${floor.name} (${hours} hr${hours > 1 ? 's' : ''})`
-    const record = addBooking({
+    const record = await addBooking({
       facility: facilityKey,
       itemName: label,
       date,
@@ -98,6 +118,7 @@ export default function TaekwondoBookingForm({ onDone }: { onDone: () => void })
       payment,
     })
     setConfirmedRef(record.reference)
+    return record
   }
 
   const goBack = () => {
@@ -117,12 +138,12 @@ export default function TaekwondoBookingForm({ onDone }: { onDone: () => void })
 
   const doCheckout = async () => {
     if (payment === 'cash') {
-      persistBooking()
+      await persistBooking()
       setStep('confirm')
       return
     }
 
-    persistBooking()
+    const record = await persistBooking()
 
     const bookingLabel = `Taekwondo · ${floor.name} (${hours} hr${hours > 1 ? 's' : ''})`
     setPaying(true)
@@ -136,7 +157,7 @@ export default function TaekwondoBookingForm({ onDone }: { onDone: () => void })
           email,
           amount: hourlyRate * hours,
           description: `ROL-EMS · ${bookingLabel} · ${date} at ${time}`,
-          metadata: { booking: bookingLabel, date, time, hours, participants },
+          metadata: { reference: record.reference, booking: bookingLabel, date, time, hours, participants },
         }),
       })
       const data = await res.json()
@@ -282,7 +303,7 @@ export default function TaekwondoBookingForm({ onDone }: { onDone: () => void })
                 {timeOpen && (
                   <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-56 overflow-y-auto border border-[#222222]/15 bg-[#FDFBF7] p-2 shadow-xl">
                     {timeSlots.map((slot) => {
-                      const taken = date ? !isSlotAvailable(facilityKey, date, slot, hours * 60) : false
+                      const taken = date && !loadingSlots ? isTimeTaken(slot, bookedTimes, hours * 60) : false
                       return (
                         <button
                           key={slot}

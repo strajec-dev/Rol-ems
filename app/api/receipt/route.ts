@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendReceiptEmail } from '@/lib/email'
+import { prisma } from '@/lib/prisma'
 
 const centsToPeso = (cents: number) => `₱${(cents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
 
@@ -48,8 +49,19 @@ export async function GET(req: NextRequest) {
       (Array.isArray(lineItems) && lineItems[0]?.name) ||
       'ROL-EMS booking'
 
+    const reference = metadata?.reference || sessionId || '—'
+
+    try {
+      await prisma.booking.updateMany({
+        where: { reference },
+        data: { status: 'confirmed' },
+      })
+    } catch (err) {
+      console.error('Receipt: failed to confirm booking in DB', err)
+    }
+
     await sendReceiptEmail(billingEmail, {
-      reference: metadata?.reference || sessionId || '—',
+      reference,
       description,
       amount: amountPaid ? centsToPeso(amountPaid) : '—',
       name: billing?.name || 'Guest',

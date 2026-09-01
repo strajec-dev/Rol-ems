@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Booking {
+  id        Int      @id @default(autoincrement())
+  reference String   @unique
+  facility  String
+  itemName  String
+  date      String
+  time      String
+  nights    Int?
+  hours     Int?
+  guests    Int
+  name      String?
+  contact   String?
+  email     String?
+  amount    Float
+  payment   String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([facility, date])
+}

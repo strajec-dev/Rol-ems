@@ -54,17 +54,44 @@ export type CottageType = {
   detail: string
   price: string
   image: string
+  capacity?: number
 }
 
 export const cottageOptions: CottageType[] = [
-  { name: 'Kubo Cottage', detail: 'Beachside nipa-hut cottage', price: '₱1,800 / day', image: '/sports-events/cottage.jpg' },
-  { name: 'Beach Cottage', detail: 'Beachside cottage rental · kubo style', price: '₱2,500 / day', image: '/sports-events/cottage.jpg' },
-  { name: 'Family Cottage', detail: 'Larger cottage for families & groups', price: '₱3,500 / day', image: '/sports-events/cottage.jpg' },
+  { name: 'Kubo Cottage', detail: 'Beachside nipa-hut cottage', price: '₱1,800 / day', image: '/sports-events/cottage.jpg', capacity: 6 },
+  { name: 'Beach Cottage', detail: 'Beachside cottage rental · kubo style', price: '₱2,500 / day', image: '/sports-events/cottage.jpg', capacity: 8 },
+  { name: 'Family Cottage', detail: 'Larger cottage for families & groups', price: '₱3,500 / day', image: '/sports-events/cottage.jpg', capacity: 12 },
 ]
 
 export const eventVenues: CottageType[] = [
-  { name: 'Half-Area Venue', detail: 'Half of the resort for smaller events', price: '₱12,000 / day', image: '/sports-events/cottage.jpg' },
-  { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: '₱20,000 / day', image: '/sports-events/cottage.jpg' },
+  { name: 'Half-Area Venue', detail: 'Half of the resort for smaller events', price: '₱12,000 / day', image: '/sports-events/cottage.jpg', capacity: 50 },
+  { name: 'Whole-Area Venue', detail: 'Whole resort / event area', price: '₱20,000 / day', image: '/sports-events/cottage.jpg', capacity: 150 },
+]
+
+export type EventAddOn = {
+  id: string
+  name: string
+  detail: string
+  price: number
+  unit: string
+}
+
+export const eventAddOns: EventAddOn[] = [
+  { id: 'chairs', name: 'Folding chairs', detail: 'Stackable chairs for guests', price: 50, unit: 'each / day' },
+  { id: 'tables', name: 'Long tables', detail: '8-ft banquet tables', price: 300, unit: 'each / day' },
+  { id: 'deck-chairs', name: 'Deck chairs', detail: 'Lounge deck chairs', price: 120, unit: 'each / day' },
+  { id: 'canopy', name: 'Canopy / tent', detail: 'Shade canopy for outdoor setups', price: 1500, unit: 'each / day' },
+  { id: 'sound', name: 'Sound system', detail: 'Speakers + mic setup', price: 2500, unit: 'per event' },
+  { id: 'gen-set', name: 'Generator', detail: 'Backup power generator', price: 2000, unit: 'per event' },
+  { id: 'catering', name: 'Catering service', detail: 'Full package, quote on request', price: 0, unit: 'quote' },
+]
+
+export const cottageAddOns: EventAddOn[] = [
+  { id: 'extra-bedding', name: 'Extra bedding', detail: 'Extra mattress + linens per guest', price: 100, unit: 'each / night' },
+  { id: 'griller', name: 'Charcoal griller', detail: 'Barbecue set with charcoal', price: 300, unit: 'per stay' },
+  { id: 'karaoke', name: 'Karaoke machine', detail: 'Videoke with speakers + mics', price: 500, unit: 'per stay' },
+  { id: 'beach-tables', name: 'Table & chairs', detail: 'Outdoor table + 4 chairs', price: 250, unit: 'per stay' },
+  { id: 'pocket-wifi', name: 'Pocket Wi-Fi', detail: 'Portable hotspot for the stay', price: 200, unit: 'per stay' },
 ]
 
 export const pickleballOptions: CottageType[] = [

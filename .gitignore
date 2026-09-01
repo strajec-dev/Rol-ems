@@ -9,6 +9,10 @@ __v0_jsx-dev-runtime.ts
 # Environment variables
 .env*.local
 
+# Prisma generated client
+lib/generated/
+prisma/seed.ts
+
 # Common ignores
 node_modules
 .next/

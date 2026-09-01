@@ -14,9 +14,14 @@ export default function CottagePage() {
           <a href="/" className="font-serif text-lg tracking-[-0.05em] text-[#1E5336]">
             ROL-EMS <span className="font-sans text-xs tracking-[0.2em] text-[#E1A728]">×</span> REBAR
           </a>
-          <a href="/" className="border-b border-[#1E5336] pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#1E5336]">
-            Back to home
-          </a>
+          <div className="flex items-center gap-5">
+            <a href="/booking/lookup" className="border-b border-[#1E5336] pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#1E5336]">
+              Check a booking
+            </a>
+            <a href="/" className="border-b border-[#1E5336] pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#1E5336]">
+              Back to home
+            </a>
+          </div>
         </div>
       </header>
 

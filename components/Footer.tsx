@@ -24,7 +24,10 @@ export default function Footer() {
       </div>
       <div className="mx-auto mt-16 flex max-w-7xl justify-between border-t border-[#222222]/10 pt-5 text-[10px] uppercase tracking-[0.12em] text-[#6B756B]">
         <span>© 2026 ROL-EMS x REBAR</span>
-        <span>Made for good days</span>
+        <span className="flex items-center gap-4">
+          <a href="/booking/lookup" className="hover:text-[#1E5336]">Check a booking</a>
+          <a href="/admin" className="hover:text-[#1E5336]">Staff</a>
+        </span>
       </div>
     </footer>
   )

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Loader2, Wallet } from 'lucide-react'
-import { cottageOptions, eventVenues } from '@/lib/data'
-import { addBooking, isSlotAvailable } from '@/lib/bookings'
+import { cottageAddOns, cottageOptions, eventAddOns, eventVenues } from '@/lib/data'
+import { addBooking, getBlockedDates, getBookedTimes, type BookingRecord } from '@/lib/bookings'
 
 type Step = 'type' | 'schedule' | 'details' | 'review' | 'confirm'
 
@@ -33,6 +33,7 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
   const [venue, setVenue] = useState(eventVenues[0])
   const [nights, setNights] = useState(1)
   const [eventDetails, setEventDetails] = useState('')
+  const [addOns, setAddOns] = useState<Record<string, number>>({})
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [guests, setGuests] = useState(4)
@@ -48,6 +49,43 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
+  const [bookedTimes, setBookedTimes] = useState<string[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [blockedDates, setBlockedDates] = useState<string[]>([])
+
+  const facilityKey = kind === 'event' ? `event:${venue.name}` : `cottage:${cottage.name}`
+
+  useEffect(() => {
+    let active = true
+    if (!date) {
+      setBookedTimes([])
+      return
+    }
+    setLoadingSlots(true)
+    const spanNights = kind === 'event' || bookingType !== 'overnight' ? 1 : nights
+    getBookedTimes(facilityKey, date, spanNights).then((times) => {
+      if (active) setBookedTimes(times)
+    }).finally(() => {
+      if (active) setLoadingSlots(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [facilityKey, date, bookingType, nights, kind])
+
+  useEffect(() => {
+    let active = true
+    if (!calendarOpen) return
+    const month = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}`
+    getBlockedDates(facilityKey, month).then((dates) => {
+      if (active) setBlockedDates(dates)
+    })
+    return () => {
+      active = false
+    }
+  }, [calendarOpen, facilityKey, viewMonth])
+
+  const capacity = kind === 'event' ? (venue.capacity ?? 50) : (cottage.capacity ?? 8)
 
   const isoDate = (d: Date) => {
     const y = d.getFullYear()
@@ -83,15 +121,15 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
     else if (step === 'details') setStep('review')
   }
 
-  const persistBooking = () => {
+  const persistBooking = async () => {
+    const addOnText = selectedAddons.length > 0 ? ` · ${formatAddOns()}` : ''
     const label =
       kind === 'event'
-        ? `Event · ${venue.name}`
+        ? `Event · ${venue.name}${addOnText}`
         : bookingType === 'overnight'
-        ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})`
-        : `Cottage · ${cottage.name} (day rental)`
-    const facilityKey = kind === 'event' ? `event:${venue.name}` : `cottage:${cottage.name}`
-    const record = addBooking({
+        ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})${addOnText}`
+        : `Cottage · ${cottage.name} (day rental)${addOnText}`
+    const record = await addBooking({
       facility: facilityKey,
       itemName: label,
       date,
@@ -105,6 +143,7 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
       payment,
     })
     setConfirmedRef(record.reference)
+    return record
   }
 
   const goBack = () => {
@@ -120,21 +159,32 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
   const baseRate = rateNumber(cottage.price)
   const eventRate = rateNumber(venue.price)
 
+  const activeAddOns = kind === 'event' ? eventAddOns : cottageAddOns
+
+  const selectedAddons = activeAddOns.filter((a) => (addOns[a.id] || 0) > 0)
+  const addOnCost = selectedAddons.reduce((sum, a) => sum + a.price * (addOns[a.id] || 0), 0)
+  const formatAddOns = () => selectedAddons.map((a) => `${a.name} ×${addOns[a.id]}`).join(', ')
+
   let chargeAmount = 0
   let totalPrice = ''
   if (kind === 'event') {
-    chargeAmount = eventRate
-    totalPrice = chargeAmount > 0 ? `₱${chargeAmount.toLocaleString()} / event` : 'Event fee on request'
+    chargeAmount = eventRate + addOnCost
+    if (chargeAmount > 0) {
+      const parts = [eventRate > 0 ? `₱${eventRate.toLocaleString()}` : 'Venue fee (on request)']
+      if (addOnCost > 0) parts.push(`+₱${addOnCost.toLocaleString()} add-ons`)
+      totalPrice = `${parts.join(' · ')} / event`
+    } else {
+      totalPrice = 'Event fee on request'
+    }
   } else {
-    chargeAmount = baseRate * nights
-    totalPrice =
-      bookingType === 'overnight'
-        ? `₱${(baseRate * nights).toLocaleString()} / ${nights} night${nights > 1 ? 's' : ''}`
-        : cottage.price
+    chargeAmount = baseRate * nights + addOnCost
+    const block = bookingType === 'overnight'
+      ? `₱${(baseRate * nights).toLocaleString()} / ${nights} night${nights > 1 ? 's' : ''}`
+      : cottage.price
+    totalPrice = addOnCost > 0 ? `${block} · +₱${addOnCost.toLocaleString()} add-ons` : block
   }
 
-  const facilityKey = kind === 'event' ? `event:${venue.name}` : `cottage:${cottage.name}`
-  const slotTaken = date && time ? !isSlotAvailable(facilityKey, date, time) : false
+  const slotTaken = date && time && bookedTimes.length > 0
 
   const scheduleReady = date && time && !slotTaken
   const nameValid = !/[^A-Za-z\s]/.test(name) && name.trim().length > 0
@@ -145,23 +195,35 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
     (step === 'type') ||
     (step === 'schedule' && !!scheduleReady) ||
     (step === 'details' && detailsReady) ||
-    (step === 'review' && chargeAmount > 0)
+    (step === 'review' && (chargeAmount > 0 || payment === 'cash'))
 
   const doCheckout = async () => {
+    let record: BookingRecord
+    try {
+      record = await persistBooking()
+    } catch (err) {
+      const conflict = (err as Error & { conflict?: boolean }).conflict
+      if (conflict) {
+        alert((err as Error).message || 'This slot is no longer available. Please pick another date or time.')
+        setStep('schedule')
+        return
+      }
+      alert((err as Error).message || 'Could not create your booking. Please try again.')
+      return
+    }
+
     if (payment === 'cash') {
-      persistBooking()
       setStep('confirm')
       return
     }
 
-    persistBooking()
-
+    const addOnText = selectedAddons.length > 0 ? ` · ${formatAddOns()}` : ''
     const bookingLabel =
       kind === 'event'
-        ? `Event · ${venue.name}`
+        ? `Event · ${venue.name}${addOnText}`
         : bookingType === 'overnight'
-        ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})`
-        : `Cottage · ${cottage.name} (day rental)`
+        ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})${addOnText}`
+        : `Cottage · ${cottage.name} (day rental)${addOnText}`
 
     setPaying(true)
     try {
@@ -175,12 +237,14 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
           amount: chargeAmount,
           description: `ROL-EMS · ${bookingLabel} · ${date} at ${time}`,
           metadata: {
+            reference: record.reference,
             booking: bookingLabel,
             date,
             time,
             guests,
             nights: kind === 'event' ? undefined : nights,
             eventDetails: kind === 'event' ? eventDetails : undefined,
+            addOns: selectedAddons.length > 0 ? formatAddOns() : undefined,
           },
         }),
       })
@@ -210,6 +274,7 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
     setVenue(eventVenues[0])
     setNights(1)
     setEventDetails('')
+    setAddOns({})
     setDate(''); setTime(''); setGuests(4); setName(''); setContact(''); setEmail(''); setPayment('online'); setPaying(false)
   }
 
@@ -290,12 +355,13 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                     {cottageOptions.map((c) => (
                       <button
                         key={c.name}
-                        onClick={() => setCottage(c)}
+                        onClick={() => { setCottage(c); setGuests((g) => Math.min(g, c.capacity ?? 8)) }}
                         className={`p-4 text-left transition ${cottage.name === c.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
                       >
                         <p className="font-serif text-lg text-[#1E5336]">{c.name}</p>
                         <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{c.detail}</p>
                         <p className="mt-3 text-sm font-bold text-[#1E5336]">{c.price}</p>
+                        {c.capacity && <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#6B756B]">Up to {c.capacity} guests</p>}
                       </button>
                     ))}
                   </div>
@@ -310,12 +376,13 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                   {eventVenues.map((v) => (
                     <button
                       key={v.name}
-                      onClick={() => setVenue(v)}
+                      onClick={() => { setVenue(v); setGuests((g) => Math.min(g, v.capacity ?? 50)) }}
                       className={`p-5 text-left transition ${venue.name === v.name ? 'border-2 border-[#1E5336] bg-[#F3F0EC]' : 'border border-[#222222]/15 hover:border-[#1E5336]/40'}`}
                     >
                       <p className="font-serif text-lg text-[#1E5336]">{v.name}</p>
                       <p className="mt-1 text-[11px] leading-4 text-[#6B756B]">{v.detail}</p>
                       <p className="mt-3 text-sm font-bold text-[#1E5336]">{v.price}</p>
+                      {v.capacity && <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#6B756B]">Up to {v.capacity} guests</p>}
                     </button>
                   ))}
                 </div>
@@ -357,7 +424,9 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                       {cells.map((c, i) => {
                         if (!c) return <span key={i} />
                         const iso = isoDate(c)
-                        const disabled = c < today
+                        const booked = blockedDates.includes(iso)
+                        const past = c < today
+                        const disabled = past || booked
                         const selected = iso === date
                         return (
                           <button
@@ -368,7 +437,9 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                             className={`h-8 text-xs transition ${
                               selected
                                 ? 'bg-[#1E5336] font-bold text-[#FDFBF7]'
-                                : disabled
+                                : booked
+                                ? 'bg-[#222222]/8 text-[#6B756B]/50 line-through'
+                                : past
                                 ? 'text-[#6B756B]/30'
                                 : 'text-[#222222] hover:bg-[#E1A728] hover:text-[#1E5336]'
                             }`}
@@ -377,6 +448,11 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                           </button>
                         )
                       })}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[#222222]/10 pt-3 text-[10px] text-[#6B756B]">
+                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#1E5336]" /> Available</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#222222]/30" /> Booked</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#E1A728]" /> Today / past</span>
                     </div>
                   </div>
                 )}
@@ -394,7 +470,7 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                 {timeOpen && (
                   <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-56 overflow-y-auto border border-[#222222]/15 bg-[#FDFBF7] p-2 shadow-xl">
                     {timeSlots.map((slot) => {
-                      const taken = date ? !isSlotAvailable(facilityKey, date, slot) : false
+                      const taken = date && !loadingSlots ? bookedTimes.length > 0 : false
                       return (
                         <button
                           key={slot}
@@ -422,11 +498,11 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
               </div>
             </div>
             <div className="mt-6">
-              <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Guests (up to {kind === 'event' ? 50 : 8})</span>
+              <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Guests (up to {capacity})</span>
               <div className="mt-2 flex items-center gap-3">
                 <button onClick={() => setGuests((g) => Math.max(1, g - 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">−</button>
                 <span className="w-10 text-center text-xl font-bold text-[#1E5336]">{guests}</span>
-                <button onClick={() => setGuests((g) => Math.min(kind === 'event' ? 50 : 8, g + 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">+</button>
+                <button onClick={() => setGuests((g) => Math.min(capacity, g + 1))} className="h-10 w-10 border border-[#222222]/20 text-lg">+</button>
               </div>
             </div>
             {bookingType === 'overnight' && (
@@ -449,6 +525,43 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                   placeholder="e.g. Wedding, birthday, team building"
                   className="mt-2 w-full border border-[#222222]/20 bg-transparent px-3 py-3 text-sm outline-none placeholder:text-[#6B756B]/50 focus:border-[#1E5336]"
                 />
+              </div>
+            )}
+
+            <div className="mt-8">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">
+                {kind === 'event' ? 'Event add-ons' : 'Stay add-ons'} (optional)
+              </span>
+              <div className="mt-3 divide-y divide-[#222222]/10 border border-[#222222]/15">
+                {activeAddOns.map((a) => {
+                  const qty = addOns[a.id] || 0
+                  return (
+                    <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-[#222222]">
+                          {a.name}
+                          <span className="ml-2 font-normal text-[#1E5336]">
+                            {a.price > 0 ? `₱${a.price.toLocaleString()} / ${a.unit}` : 'Quote on request'}
+                          </span>
+                        </p>
+                        <p className="mt-0.5 text-[11px] leading-4 text-[#6B756B]">{a.detail}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {qty > 0 && <span className="text-sm font-bold text-[#1E5336]">₱{(a.price * qty).toLocaleString()}</span>}
+                        <button onClick={() => setAddOns((s) => ({ ...s, [a.id]: Math.max(0, qty - 1) }))} className="h-8 w-8 border border-[#222222]/20 text-lg leading-none">−</button>
+                        <span className="w-6 text-center text-sm font-bold text-[#1E5336]">{qty}</span>
+                        <button onClick={() => setAddOns((s) => ({ ...s, [a.id]: qty + 1 }))} className="h-8 w-8 border border-[#222222]/20 text-lg leading-none">+</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {date && time && (
+              <div className="mt-8 flex items-center justify-between border border-[#1E5336]/20 bg-[#F3F0EC] px-4 py-3">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Estimated total</span>
+                <span className="text-sm font-bold text-[#1E5336]">{totalPrice}</span>
               </div>
             )}
           </>
@@ -536,6 +649,19 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
                   <span>{eventDetails || '—'}</span>
                 </div>
               )}
+              {kind === 'event' && selectedAddons.length > 0 && (
+                <div className="px-4 py-3 text-sm">
+                  <span className="text-[#6B756B]">Add-ons</span>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                    {selectedAddons.map((a) => (
+                      <span key={a.id} className="text-[#222222]">
+                        {a.name} ×{addOns[a.id]}
+                        <span className="ml-1 text-[#6B756B]">₱{(a.price * (addOns[a.id] || 0)).toLocaleString()}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between px-4 py-3 text-sm">
                 <span className="text-[#6B756B]">Guest</span>
                 <span>{name} · {contact}</span>
@@ -587,6 +713,9 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
             <div className="mt-6 w-full max-w-sm border border-[#222222]/15 p-4 text-left text-sm">
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Reference</span><span className="font-bold text-[#1E5336]">{confirmedRef}</span></div>
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Booking</span><span>{kind === 'event' ? 'Event' : bookingType === 'day' ? 'Day rental' : `Overnight · ${nights} night${nights > 1 ? 's' : ''}`}</span></div>
+              {kind === 'event' && selectedAddons.length > 0 && (
+                <div className="flex justify-between py-1"><span className="text-[#6B756B]">Add-ons</span><span>{formatAddOns()}</span></div>
+              )}
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Guest</span><span>{name}</span></div>
               <div className="flex justify-between py-1"><span className="text-[#6B756B]">Payment</span><span>{payment === 'online' ? 'Online (GCash / card)' : 'Pay at the venue'}</span></div>
               <div className="flex justify-between border-t border-[#222222]/15 pt-2 mt-2"><span className="text-[#6B756B]">Total</span><span className="font-bold text-[#1E5336]">{totalPrice}</span></div>
