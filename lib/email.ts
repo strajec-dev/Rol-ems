@@ -8,6 +8,10 @@ type TemplateData = {
   date?: string
   time?: string
   guests?: string
+  /** If set, shows a 'Download Receipt' button in the email */
+  receiptUrl?: string
+  /** If true, wording is for cash / pay-at-venue bookings */
+  isCash?: boolean
 }
 
 let cached: Transporter | null = null
@@ -26,12 +30,13 @@ function transporter(): Transporter {
   return cached
 }
 
-function html({ reference, description, amount, name, date, time, guests }: TemplateData): string {
+function html({ reference, description, amount, name, date, time, guests, receiptUrl, isCash }: TemplateData): string {
   const rows = [
     ['Reference', reference],
     ['Booking', description],
     ...(date ? [['Date', `${date}${time ? ` · ${time}` : ''}`]] : []),
     ...(guests ? [['Guests', guests]] : []),
+    ['Payment', isCash ? 'Pay at the venue' : 'Online (GCash / card)'],
   ]
     .map(
       ([k, v]) =>
@@ -39,21 +44,35 @@ function html({ reference, description, amount, name, date, time, guests }: Temp
     )
     .join('')
 
+  const headline = isCash ? 'Reservation confirmed!' : 'Payment received!'
+  const subline = isCash
+    ? 'Your booking is confirmed. Please bring payment when you arrive. Details below.'
+    : 'Your payment has been received. Details below.'
+  const totalLabel = isCash ? 'Amount due at venue' : 'Total paid'
+
+  const downloadBtn = receiptUrl
+    ? `<div style="margin-top:20px;text-align:center">
+        <a href="${receiptUrl}" style="display:inline-block;background:#1E5336;color:#FDFBF7;padding:12px 28px;font-size:11px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif">Download receipt</a>
+      </div>`
+    : ''
+
   return `
   <div style="background:#F3F0EC;padding:32px 16px;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:520px;margin:0 auto;background:#FDFBF7;border:1px solid #e5e0d6;overflow:hidden">
       <div style="background:#1E5336;padding:24px;text-align:center">
         <div style="color:#FDFBF7;font-family:Georgia,serif;font-size:20px;letter-spacing:-0.5px">ROL-EMS <span style="color:#E1A728">&times;</span> REBAR</div>
-        <div style="color:#E1A728;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:4px">Payment receipt</div>
+        <div style="color:#E1A728;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:4px">Booking Receipt</div>
       </div>
       <div style="padding:24px">
         <p style="margin:0 0 4px;color:#222;font-size:15px;font-weight:600">Thank you, ${name}!</p>
-        <p style="margin:0 0 20px;color:#6B756B;font-size:13px">Your payment has been received. Details below.</p>
+        <p style="margin:0 0 4px;color:#222;font-size:14px;font-weight:700">${headline}</p>
+        <p style="margin:0 0 20px;color:#6B756B;font-size:13px">${subline}</p>
         <table style="width:100%;border-collapse:collapse">${rows}</table>
         <div style="display:flex;justify-content:space-between;margin-top:16px;border-top:2px solid #1E5336;padding-top:12px">
-          <span style="color:#222;font-weight:700">Total paid</span>
+          <span style="color:#222;font-weight:700">${totalLabel}</span>
           <span style="color:#1E5336;font-weight:700">${amount}</span>
         </div>
+        ${downloadBtn}
         <p style="margin:24px 0 0;color:#6B756B;font-size:12px;line-height:1.5">We look forward to hosting you. If you have any questions, reply to this email or reach us at the resort.</p>
       </div>
     </div>

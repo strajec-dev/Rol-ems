@@ -198,10 +198,12 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
     (step === 'review' && (chargeAmount > 0 || payment === 'cash'))
 
   const doCheckout = async () => {
+    setPaying(true)
     let record: BookingRecord
     try {
       record = await persistBooking()
     } catch (err) {
+      setPaying(false)
       const conflict = (err as Error & { conflict?: boolean }).conflict
       if (conflict) {
         alert((err as Error).message || 'This slot is no longer available. Please pick another date or time.')
@@ -213,6 +215,7 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
     }
 
     if (payment === 'cash') {
+      setPaying(false)
       setStep('confirm')
       return
     }
@@ -225,7 +228,6 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
         ? `Cottage · ${cottage.name} (${nights} night${nights > 1 ? 's' : ''})${addOnText}`
         : `Cottage · ${cottage.name} (day rental)${addOnText}`
 
-    setPaying(true)
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -259,7 +261,6 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
       console.error(err)
       const msg = err instanceof Error && err.message ? err.message : 'Something went wrong starting your payment. Please try again.'
       alert(msg)
-    } finally {
       setPaying(false)
     }
   }
@@ -748,13 +749,19 @@ export default function CottageBookingForm({ onDone }: { onDone: () => void }) {
       )}
 
       {step === 'confirm' && (
-        <div className="flex justify-center border-t border-[#222222]/10 px-6 py-5">
+        <div className="flex justify-center gap-4 border-t border-[#222222]/10 px-6 py-5">
+          <button
+            onClick={() => window.print()}
+            className="border border-[#1E5336] px-6 py-3 text-[10px] uppercase tracking-[0.16em] text-[#1E5336] hover:bg-[#1E5336] hover:text-[#FDFBF7]"
+          >
+            Download receipt
+          </button>
           <button
             onClick={() => {
               reset()
               onDone()
             }}
-            className="border border-[#1E5336] px-6 py-3 text-[10px] uppercase tracking-[0.16em] text-[#1E5336] hover:bg-[#1E5336] hover:text-[#FDFBF7]"
+            className="bg-[#1E5336] px-6 py-3 text-[10px] uppercase tracking-[0.16em] text-[#FDFBF7] hover:bg-[#153d27]"
           >
             Done
           </button>

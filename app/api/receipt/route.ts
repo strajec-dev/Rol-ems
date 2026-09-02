@@ -60,6 +60,9 @@ export async function GET(req: NextRequest) {
       console.error('Receipt: failed to confirm booking in DB', err)
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const receiptUrl = `${siteUrl}/booking/receipt?ref=${encodeURIComponent(reference)}`
+
     await sendReceiptEmail(billingEmail, {
       reference,
       description,
@@ -68,6 +71,7 @@ export async function GET(req: NextRequest) {
       date: metadata?.date,
       time: metadata?.time,
       guests: metadata?.guests ? String(metadata?.guests) : undefined,
+      receiptUrl,
     })
 
     return NextResponse.json({ ok: true, email: billingEmail })
