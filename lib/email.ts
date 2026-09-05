@@ -50,6 +50,16 @@ function html({ reference, description, amount, name, date, time, guests, receip
     : 'Your payment has been received. Details below.'
   const totalLabel = isCash ? 'Amount due at venue' : 'Total paid'
 
+  const paymentNote = isCash
+    ? 'Pay at the venue: please settle this booking at the front desk when you arrive. We accept cash, GCash, and Maya — no online payment is required.'
+    : 'Online payment: your payment was processed online via GCash, card, or an e-wallet. No payment is due at the venue.'
+
+  const noteBox = `
+    <div style="margin-top:20px;border:1px solid #e5e0d6;background:#F3F0EC;padding:14px 16px">
+      <div style="color:#1E5336;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:4px">Payment method</div>
+      <p style="margin:0;color:#6B756B;font-size:12px;line-height:1.5">${paymentNote}</p>
+    </div>`
+
   const downloadBtn = receiptUrl
     ? `<div style="margin-top:20px;text-align:center">
         <a href="${receiptUrl}" style="display:inline-block;background:#1E5336;color:#FDFBF7;padding:12px 28px;font-size:11px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif">Download receipt</a>
@@ -72,6 +82,7 @@ function html({ reference, description, amount, name, date, time, guests, receip
           <span style="color:#222;font-weight:700">${totalLabel}</span>
           <span style="color:#1E5336;font-weight:700">${amount}</span>
         </div>
+        ${noteBox}
         ${downloadBtn}
         <p style="margin:24px 0 0;color:#6B756B;font-size:12px;line-height:1.5">We look forward to hosting you. If you have any questions, reply to this email or reach us at the resort.</p>
       </div>
