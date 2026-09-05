@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -201,4 +202,55 @@ header {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.font-serif {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* ─── Pickleball Status Badges ──────────────────────────────────────────────── */
+
+.badge-available {
+  background-color: #e8f3ed;
+  color: #1E5336;
+  border: 1px solid rgba(30, 83, 54, 0.2);
+}
+
+.badge-reserved {
+  background-color: #fdf6e7;
+  color: #b8850f;
+  border: 1px solid rgba(225, 167, 40, 0.3);
+}
+
+.badge-occupied {
+  background-color: #fde8e8;
+  color: #c53030;
+  border: 1px solid rgba(197, 48, 48, 0.2);
+}
+
+.badge-open-play {
+  background-color: #ebf8ff;
+  color: #2b6cb0;
+  border: 1px solid rgba(43, 108, 176, 0.2);
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.dot-pulse-green {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F3F0EC;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E5336;
 }

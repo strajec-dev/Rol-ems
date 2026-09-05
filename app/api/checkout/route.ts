@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
           },
         ],
         payment_method_types: ['gcash', 'card', 'paymaya', 'grab_pay'],
-        success_url: `${siteUrl}/payment/success`,
+        success_url: `${siteUrl}/payment/success?session_id={id}`,
         cancel_url: `${siteUrl}/#facilities`,
         metadata: mergedMetadata,
       },

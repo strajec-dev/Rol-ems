@@ -1,5 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { PickleballProvider } from '@/context/PickleballContext'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-[#FDFBF7]">
       <body className="antialiased">
-        {children}
+        <PickleballProvider>
+          {children}
+        </PickleballProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

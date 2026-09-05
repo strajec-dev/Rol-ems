@@ -1,166 +1,142 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
-import type { BookingRecord } from '@/lib/bookings'
+import Link from 'next/link'
+import { usePickleball } from '@/context/PickleballContext'
+import { LayoutDashboard, CalendarCheck, Users, Trophy, Volleyball, Disc, ChevronRight } from 'lucide-react'
 
-type Tab = 'upcoming' | 'today' | 'pending' | 'all'
+export default function AdminDashboardPage() {
+  const { reservations, openPlaySessions, tournaments, paddles, paddleRentals } = usePickleball()
 
-const statusStyle: Record<string, string> = {
-  confirmed: 'bg-[#1E5336] text-[#FDFBF7]',
-  pending: 'bg-[#E1A728] text-[#1E5336]',
-  completed: 'bg-[#222222]/10 text-[#6B756B]',
-  expired: 'bg-[#222222]/10 text-[#6B756B]',
-  cancelled: 'bg-[#222222]/10 text-[#6B756B]',
-}
-
-const tabs: { key: Tab; label: string }[] = [
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'today', label: 'Today' },
-  { key: 'pending', label: 'Needs attention' },
-  { key: 'all', label: 'All' },
-]
-
-export default function AdminPage() {
-  const [bookings, setBookings] = useState<BookingRecord[] | null>(null)
-  const [tab, setTab] = useState<Tab>('upcoming')
-  const [busy, setBusy] = useState<string | null>(null)
-
-  const load = async () => {
-    setBookings(null)
-    try {
-      const res = await fetch('/api/bookings', { cache: 'no-store' })
-      if (!res.ok) throw new Error('Failed')
-      const data = await res.json()
-      setBookings(Array.isArray(data) ? data : [])
-    } catch {
-      setBookings([])
-    }
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
-
-  const todayIso = useMemo(() => {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  }, [])
-
-  const setStatus = async (reference: string, status: string) => {
-    setBusy(reference)
-    try {
-      await fetch(`/api/bookings/${encodeURIComponent(reference)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      })
-      await load()
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const filtered = useMemo(() => {
-    const rows = bookings || []
-    switch (tab) {
-      case 'pending':
-        return rows.filter((b) => b.status === 'pending')
-      case 'today':
-        return rows.filter((b) => b.date === todayIso)
-      case 'upcoming':
-        return rows.filter((b) => b.date >= todayIso && b.status !== 'expired' && b.status !== 'cancelled')
-      default:
-        return rows
-    }
-  }, [bookings, tab, todayIso])
+  const totalBookings = reservations.length
+  const pendingPayments = reservations.filter((r) => r.paymentStatus === 'pending').length
+  const totalRevenue = reservations.filter((r) => r.paymentStatus === 'paid').reduce((sum, r) => sum + r.total, 0)
+  const activeRentalsCount = paddleRentals.filter((r) => r.status === 'Active' || r.status === 'Reserved').length
 
   return (
-    <main className="min-h-screen bg-[#F3F0EC] text-[#222222]">
-      <header className="border-b border-[#222222]/10 bg-[#FDFBF7]">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <p className="font-serif text-lg tracking-[-0.05em] text-[#1E5336]">
-            ROL-EMS <span className="font-sans text-xs tracking-[0.2em] text-[#E1A728]">×</span> REBAR
-          </p>
-          <a href="/" className="flex items-center gap-2 border-b border-[#1E5336] pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#1E5336]">
-            <ArrowLeft size={14} /> Back to home
-          </a>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-4xl px-6 py-12">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-[#F3F0EC] text-[#222222] pb-16">
+      {/* Subheader */}
+      <section className="bg-[#FDFBF7] border-b border-[#222222]/10 px-6 py-8">
+        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">Staff · Bookings</p>
-            <h1 className="mt-3 font-serif text-5xl leading-[0.95] tracking-[-0.05em] text-[#1E5336]">
-              Reservations.
-            </h1>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#E1A728]">ROL-EMS Management</p>
+            <h1 className="mt-1 font-serif text-4xl text-[#1E5336]">Admin Pickleball Dashboard</h1>
           </div>
-          <button onClick={load} className="flex items-center gap-2 border border-[#1E5336]/30 px-4 py-2 text-[10px] uppercase tracking-[0.14em] text-[#1E5336] hover:bg-[#1E5336] hover:text-[#FDFBF7]">
-            <RefreshCw size={14} className={bookings ? '' : 'animate-spin'} /> Refresh
-          </button>
+          <span className="border border-[#1E5336] px-3 py-1 text-[10px] uppercase tracking-[0.14em] font-bold text-[#1E5336]">
+            System Online
+          </span>
         </div>
+      </section>
 
-        <div className="mt-8 flex gap-2 overflow-x-auto pb-2">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`whitespace-nowrap border px-4 py-2 text-[10px] uppercase tracking-[0.14em] ${tab === t.key ? 'border-[#1E5336] bg-[#1E5336] text-[#FDFBF7]' : 'border-[#222222]/20 text-[#6B756B]'}`}
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        {/* Navigation Cards Grid */}
+        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          {[
+            { label: 'Court Schedule', href: '/admin/courts', icon: Volleyball, count: `3 Courts` },
+            { label: 'Reservations', href: '/admin/reservations', icon: CalendarCheck, count: `${totalBookings} Total` },
+            { label: 'Open Play Controls', href: '/admin/open-play', icon: Users, count: `${openPlaySessions.length} Sessions` },
+            { label: 'Paddle Management', href: '/admin/paddles', icon: Disc, count: `${paddles.length} Paddles` },
+            { label: 'Tournaments & Bracket', href: '/admin/tournaments', icon: Trophy, count: `${tournaments.length} Events` },
+          ].map(({ label, href, icon: Icon, count }) => (
+            <Link
+              key={label}
+              href={href}
+              className="border border-[#222222]/15 bg-[#FDFBF7] p-5 transition hover:border-[#1E5336] shadow-sm flex flex-col justify-between"
             >
-              {t.label}
-            </button>
+              <div>
+                <div className="flex h-9 w-9 items-center justify-center bg-[#1E5336] text-[#FDFBF7] mb-3">
+                  <Icon size={18} />
+                </div>
+                <h3 className="font-serif text-base font-bold text-[#1E5336]">{label}</h3>
+              </div>
+              <p className="text-xs text-[#6B756B] mt-2">{count}</p>
+            </Link>
           ))}
         </div>
 
-        {bookings === null ? (
-          <p className="mt-10 text-sm text-[#6B756B]">Loading…</p>
-        ) : filtered.length === 0 ? (
-          <div className="mt-10 border border-[#222222]/15 bg-[#FDFBF7] p-6 text-sm text-[#6B756B]">No bookings here yet.</div>
-        ) : (
-          <div className="mt-6 space-y-3">
-            {filtered.map((b) => (
-              <div key={b.reference} className="flex flex-wrap items-center justify-between gap-4 border border-[#222222]/15 bg-[#FDFBF7] p-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-[#1E5336]">{b.reference}</span>
-                    <span className={`px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${statusStyle[b.status] || statusStyle.pending}`}>{b.status}</span>
-                  </div>
-                  <p className="mt-1 text-sm text-[#222222]">{b.itemName}</p>
-                  <p className="mt-0.5 text-[11px] text-[#6B756B]">
-                    {b.date} · {b.time} · {b.guests} guest{b.guests > 1 ? 's' : ''} · {b.name || '—'} {b.contact ? `· ${b.contact}` : ''} · {b.payment === 'online' ? 'Online' : 'Cash'} · ₱{b.amount.toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  {b.status === 'pending' && (
-                    <>
-                      <button onClick={() => setStatus(b.reference, 'confirmed')} disabled={busy === b.reference} className="border border-[#1E5336] px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-[#1E5336] hover:bg-[#1E5336] hover:text-[#FDFBF7]">
-                        Confirm
-                      </button>
-                      <button onClick={() => setStatus(b.reference, 'expired')} disabled={busy === b.reference} className="border border-[#222222]/20 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-[#6B756B] hover:border-red-600 hover:text-red-600">
-                        Expire
-                      </button>
-                    </>
-                  )}
-                  {b.status === 'confirmed' && (
-                    <button onClick={() => setStatus(b.reference, 'completed')} disabled={busy === b.reference} className="border border-[#1E5336] px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-[#1E5336] hover:bg-[#1E5336] hover:text-[#FDFBF7]">
-                      Completed
-                    </button>
-                  )}
-                  {(b.status === 'pending' || b.status === 'confirmed' || b.status === 'completed') && (
-                    <button onClick={() => setStatus(b.reference, 'cancelled')} disabled={busy === b.reference} className="border border-[#222222]/20 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-[#6B756B] hover:border-red-600 hover:text-red-600">
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+        {/* Operational Metrics */}
+        <div className="mb-8 grid gap-4 sm:grid-cols-4">
+          <div className="border border-[#222222]/15 bg-[#FDFBF7] p-5 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Confirmed Revenue</p>
+            <p className="mt-2 font-serif text-3xl text-[#1E5336]">₱{totalRevenue.toLocaleString()}</p>
+            <p className="mt-1 text-xs text-[#6B756B]">From paid reservations</p>
           </div>
-        )}
-      </section>
-    </main>
+
+          <div className="border border-[#222222]/15 bg-[#FDFBF7] p-5 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Pending Payments</p>
+            <p className="mt-2 font-serif text-3xl text-[#E1A728]">{pendingPayments}</p>
+            <p className="mt-1 text-xs text-[#6B756B]">Requires verification action</p>
+          </div>
+
+          <div className="border border-[#222222]/15 bg-[#FDFBF7] p-5 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Active Paddle Rentals</p>
+            <p className="mt-2 font-serif text-3xl text-emerald-700">{activeRentalsCount}</p>
+            <p className="mt-1 text-xs text-[#6B756B]">Currently rented or reserved</p>
+          </div>
+
+          <div className="border border-[#222222]/15 bg-[#FDFBF7] p-5 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#6B756B]">Courts Operational</p>
+            <div className="mt-2 flex items-center gap-2 text-xs font-bold text-[#1E5336]">
+              <span>1 Available</span> · <span>1 Reserved</span> · <span>1 Open Play</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Reservations Table */}
+        <div className="border border-[#222222]/15 bg-[#FDFBF7] p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4 border-b border-[#222222]/10 pb-3">
+            <h2 className="font-serif text-2xl text-[#1E5336]">Recent Reservations</h2>
+            <Link href="/admin/reservations" className="text-xs text-[#1E5336] uppercase tracking-[0.12em] font-bold hover:underline">
+              View All →
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-[#222222]/10 bg-[#F3F0EC] text-[#6B756B] uppercase font-bold tracking-wider">
+                <tr>
+                  <th className="p-3">Booking Reference</th>
+                  <th className="p-3">Customer</th>
+                  <th className="p-3">Court</th>
+                  <th className="p-3">Date & Time</th>
+                  <th className="p-3">Payment</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#222222]/10">
+                {reservations.slice(0, 5).map((r) => (
+                  <tr key={r.id} className="hover:bg-amber-50/30">
+                    <td className="p-3 font-mono font-bold text-[#1E5336]">{r.bookingId}</td>
+                    <td className="p-3 font-bold text-[#222222]">
+                      {r.customerName}
+                      {r.paddleRentalName && (
+                        <span className="block text-[10px] font-normal text-emerald-800 font-sans">
+                          + {r.paddleRentalName} Rental
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 text-[#1E5336]">{r.court}</td>
+                    <td className="p-3 text-[#6B756B]">{r.date} · {r.time}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase ${
+                        r.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-[#E1A728]/20 text-[#1E5336]'
+                      }`}>
+                        {r.paymentMethod} ({r.paymentStatus})
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase ${
+                        r.bookingStatus === 'confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {r.bookingStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
